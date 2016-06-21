@@ -1,5 +1,6 @@
 var galleryDatas = require('../data/galleryInfo.json');
 var FigureImg = require('./imgFigure.jsx');
+var ControllerNav = require('./controllerNav.jsx');
 var GalleryReactApp = React.createClass({
 	constant: {
 		/*中心图片位置*/
@@ -193,7 +194,7 @@ var GalleryReactApp = React.createClass({
 	},
 
 	render: function() {
-		var controlerNavUnits = [];
+		var controllerNavUnits = [];
 		var figureImgUnits = [];
 		galleryDatas.forEach(function (value,index){
 			if(!this.state.imgsArrangeArr[index]){
@@ -210,6 +211,7 @@ var GalleryReactApp = React.createClass({
 			var imgArrange = this.state.imgsArrangeArr[index];
 
 			figureImgUnits.push(<FigureImg data={value} arrange={imgArrange} inverseFunc={this.inverseFigure(index)} centerFunc={this.changeCenterFigure(index)} ref={'imgFigure' + index}/>);
+			controllerNavUnits.push(<ControllerNav arrange={imgArrange} inverseFunc={this.inverseFigure(index)} centerFunc={this.changeCenterFigure(index)}/>);
 
 		}.bind(this));
 		return ( 
@@ -217,8 +219,8 @@ var GalleryReactApp = React.createClass({
 				<section className ="img-sec">
 					{figureImgUnits}
 				</section>
-				<nav className = "controler-nav" >
-					{controlerNavUnits}
+				<nav className = "controller-nav" >
+					{controllerNavUnits}
 				</nav>
 			</section>
 			);

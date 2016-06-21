@@ -2,9 +2,10 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 var GalleryReactApp=require('./galleryReactApp.jsx');
 ReactDOM.render(React.createElement(GalleryReactApp, null), document.getElementById('app'));
 
-},{"./galleryReactApp.jsx":4}],4:[function(require,module,exports){
+},{"./galleryReactApp.jsx":5}],5:[function(require,module,exports){
 var galleryDatas = require('../data/galleryInfo.json');
 var FigureImg = require('./imgFigure.jsx');
+var ControllerNav = require('./controllerNav.jsx');
 var GalleryReactApp = React.createClass({displayName: "GalleryReactApp",
 	constant: {
 		/*中心图片位置*/
@@ -198,7 +199,7 @@ var GalleryReactApp = React.createClass({displayName: "GalleryReactApp",
 	},
 
 	render: function() {
-		var controlerNavUnits = [];
+		var controllerNavUnits = [];
 		var figureImgUnits = [];
 		galleryDatas.forEach(function (value,index){
 			if(!this.state.imgsArrangeArr[index]){
@@ -215,6 +216,7 @@ var GalleryReactApp = React.createClass({displayName: "GalleryReactApp",
 			var imgArrange = this.state.imgsArrangeArr[index];
 
 			figureImgUnits.push(React.createElement(FigureImg, {data: value, arrange: imgArrange, inverseFunc: this.inverseFigure(index), centerFunc: this.changeCenterFigure(index), ref: 'imgFigure' + index}));
+			controllerNavUnits.push(React.createElement(ControllerNav, {arrange: imgArrange, inverseFunc: this.inverseFigure(index), centerFunc: this.changeCenterFigure(index)}));
 
 		}.bind(this));
 		return ( 
@@ -222,8 +224,8 @@ var GalleryReactApp = React.createClass({displayName: "GalleryReactApp",
 				React.createElement("section", {className: "img-sec"}, 
 					figureImgUnits
 				), 
-				React.createElement("nav", {className: "controler-nav"}, 
-					controlerNavUnits
+				React.createElement("nav", {className: "controller-nav"}, 
+					controllerNavUnits
 				)
 			)
 			);
@@ -233,12 +235,12 @@ var GalleryReactApp = React.createClass({displayName: "GalleryReactApp",
 
 module.exports = GalleryReactApp;
 
-},{"../data/galleryInfo.json":6,"./imgFigure.jsx":5}],6:[function(require,module,exports){
+},{"../data/galleryInfo.json":7,"./controllerNav.jsx":4,"./imgFigure.jsx":6}],7:[function(require,module,exports){
 module.exports=[
 {
 	"filename": "images/1.jpg",
 	"title": "picture name",
-	"desc": "from phone and weekend photo. a happy day.hahaahahahahahhahha"
+	"desc": "from phone and weekend photo. a happy day.hah aah ahah ah ahhah ha"
 },
 {
 	"filename": "../images/2.jpg",
@@ -312,7 +314,7 @@ module.exports=[
 	"desc": "from phone and weekend photo. a happy day.hahaahahahahahhahha"
 },
 ]
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 var ImgFigure = React.createClass({displayName: "ImgFigure",
 
 	/*
@@ -367,5 +369,35 @@ var ImgFigure = React.createClass({displayName: "ImgFigure",
 	}
 });
 module.exports = ImgFigure;
+
+},{}],4:[function(require,module,exports){
+var ControllerUnit = React.createClass({displayName: "ControllerUnit",
+	//处理点击事件函数
+	handleClick: function(e){
+		var isCenter = this.props.arrange.isCenter;
+		if(isCenter){
+			this.props.inverseFunc();
+		}else{
+			this.props.centerFunc();
+		}
+		e.stopPropagation();
+		e.preventDefault();
+	},
+	render: function(){
+		var controllerUnitClassName = "controller-unit";
+		//如果选中的需要居中，则设置居中
+		if(this.props.arrange.isCenter){
+			controllerUnitClassName += "is-center";
+			//如果选中的标识点击后需要翻转，则设置翻转样式
+			if(this.props.arrange.isInverse){
+				controllerUnitClassName += "inverse";
+			}
+		}
+		return (
+			React.createElement("span", {className: controllerUnitClassName, onClick: this.handleClick})
+			);
+	}
+});
+module.exports = ControllerUnit;
 
 },{}]},{},[1]);
