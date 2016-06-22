@@ -355,14 +355,19 @@ var ImgFigure = React.createClass({displayName: "ImgFigure",
 
 		return (
 			React.createElement("figure", {className: figureClassName, style: styleObj, onClick: this.handleClick}, 
+				React.createElement("div", {className: "img-front"}, 
 				React.createElement("img", {src: this.props.data.filename, alt: this.props.data.title}), 
 				React.createElement("figcaption", {onClick: this.handleClick}, 
-					React.createElement("h2", {className: "img-title"}, this.props.data.title), 
-					React.createElement("div", {className: "img-back"}, 
-						React.createElement("p", null, 
-						this.props.data.desc
-						)
+					React.createElement("h2", {className: "img-title"}, this.props.data.title)
+		
+				)
+				), 
+				React.createElement("a", {href: "#", onClick: this.handleClick}, 
+				React.createElement("div", {className: "img-back", onClick: this.handleClick}, 
+					React.createElement("p", {onClick: this.handleClick}, 
+					this.props.data.desc
 					)
+				)
 				)
 			)
 		);
@@ -387,10 +392,10 @@ var ControllerUnit = React.createClass({displayName: "ControllerUnit",
 		var controllerUnitClassName = "controller-unit";
 		//如果选中的需要居中，则设置居中
 		if(this.props.arrange.isCenter){
-			controllerUnitClassName += "is-center";
+			controllerUnitClassName += " is-center";
 			//如果选中的标识点击后需要翻转，则设置翻转样式
 			if(this.props.arrange.isInverse){
-				controllerUnitClassName += "inverse";
+				controllerUnitClassName += " inverse";
 			}
 		}
 		return (

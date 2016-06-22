@@ -14,10 +14,10 @@ var ControllerUnit = React.createClass({
 		var controllerUnitClassName = "controller-unit";
 		//如果选中的需要居中，则设置居中
 		if(this.props.arrange.isCenter){
-			controllerUnitClassName += "is-center";
+			controllerUnitClassName += " is-center";
 			//如果选中的标识点击后需要翻转，则设置翻转样式
 			if(this.props.arrange.isInverse){
-				controllerUnitClassName += "inverse";
+				controllerUnitClassName += " inverse";
 			}
 		}
 		return (

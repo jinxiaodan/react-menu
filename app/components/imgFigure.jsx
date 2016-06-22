@@ -38,15 +38,20 @@ var ImgFigure = React.createClass({
 
 		return (
 			<figure className={figureClassName} style={styleObj} onClick={this.handleClick}>
+				<div className="img-front">
 				<img src={this.props.data.filename} alt={this.props.data.title}/>
 				<figcaption  onClick={this.handleClick}>
 					<h2 className="img-title">{this.props.data.title}</h2>
-					<div className="img-back">
-						<p>
-						{this.props.data.desc}
-						</p>
-					</div>
+		
 				</figcaption>
+				</div>
+				<a href="#" onClick={this.handleClick}>
+				<div className="img-back" onClick={this.handleClick}>
+					<p  onClick={this.handleClick}>
+					{this.props.data.desc}
+					</p>
+				</div>
+				</a>
 			</figure>
 		);
 	}
