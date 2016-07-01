@@ -1,4 +1,4 @@
-var galleryDatas = require('../data/galleryInfo.json');
+var galleryDatas = require('../../data/galleryInfo.json');
 var FigureImg = require('./imgFigure.jsx');
 var ControllerNav = require('./controllerNav.jsx');
 var GalleryReactApp = React.createClass({
