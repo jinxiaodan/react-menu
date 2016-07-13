@@ -1,10 +1,3586 @@
-<<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
 <head>
-	<meta charset="UTF-8">
-	<title>初审岗</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<title>客服初审岗</title>
+	
+	<link rel="stylesheet" type="text/css" href="${rc.contextPath}/statics/css/flow.css">
+<style type="text/css">
+form {
+	margin: 0;
+	padding: 0;
+}
+
+.dv-table td {
+	border: 0;
+}
+
+.dv-table input {
+	border: 1px solid #ccc;
+}
+</style>
+<script type="text/javascript" charset="UTF-8">
+	
+	//控制Button的隐藏与显示
+	function DisplayAndHiddenBtn(btnId, type) {
+		var currentBtn = document.getElementById(btnId);
+	    if (type == "d") {
+	        currentBtn.style.display = "inline-block"; //style中的display属性
+	    }
+	    else if (type == "h") {
+	        currentBtn.style.display = "none";
+	    }
+	}
+	//初始化套餐datagrid
+	var borrowPackageDataGridList;
+	
+	//预览页面的窗口
+	var dilog;
+	var detailFlag = true;
+	
+	var nodeId ;//岗位ID
+	var barCode;//流程编号
+	var custId;//借款人ID
+	var detailPackage;
+	var dbrDialog;
+	var loanType;
+	var able;
+	var loanAmount;
+	var daikuanlx;//贷款类型
+	var newCarLimit;//计算后的车辆额度
+	var grid;//抵押的数据表格
+	
+	var flowType;
+	$(function() {
+		//test();
+		//addTrByDynamic('tab', -1, 3);//动态添加额度信息的table行
+		
+		able = '$!{able}';
+		flowType = "$!{BBI.custType}";
+		if(flowType>=2 && flowType<6){
+			$("#jjyy").css("display","block");
+		}
+		loanAmount = '$!{BBI.loanAmount}';
+		var loanTypeValue = 0;
+
+		if ('$!{BBI.loanType}') {
+			loanTypeValue = '$!{BBI.loanType}';
+			loanType = '$!{BBI.loanType}';
+		}
+		$('#loanType_add').val(loanTypeValue);
+		$.dictionary('education_add','EDUCATION','');
+		$.dictionary('custSource_jkrxx','CUSTOMER_SOURCE','');
+		$.dictionary('regularCustomer_jkrxx','HAVE_NO','');
+		$.dictionary('loanType_add','LOAN_TYPE','');
+		$.dictionary('marriage_sqb','MARRIAGE','');
+		$.dictionary('makeLoanType_add','MAKE_LOAN_TYPE','');
+		//$.dictionary('loanFormal_add','LOAN_FORMAT','');
+		$.dictionary('custType_fyxx','CUST_TYPE','');
+		$.dictionary('callResult_add','CALL_RESULT','');
+		$("#callResult_add").combobox({
+			panelHeight:120
+		})
+		
+		$('#regularCustomer_jkrxx').combobox('setValue', '有');//默认设置有驾照
+		$('#marriage_sqb').combobox('setValue', '$!{BRW.marriage}');
+		$('#custType_fyxx').combobox('setValue', '$!{BBI.custType}');
+		$('#evaluateSource_fyxx').combobox('setValue', '$!{BBI.evaluateSource}');
+		$('#loanType_fyxx').combobox('setValue', '$!{BBI.loanType}');
+		
+		var tongDundlg;
+		
+		nodeId = $('#nodeId').val();
+		barCode = $('#barCode').val();
+		custId = '$!{BBI.custId}';
+		if(nodeId == 'A01'){
+			if('$!{able}' == '1'){
+				DisplayAndHiddenBtn('tiJiaoBtn','d');
+				DisplayAndHiddenBtn('baoCunBtn','d');
+				DisplayAndHiddenBtn('quxiaoBtn','d');
+				DisplayAndHiddenBtn('fhgwlb','d');
+			}
+			DisplayAndHiddenBtn('danBaoRenBtn','d');
+			DisplayAndHiddenBtn('previewBtn','d');
+			DisplayAndHiddenBtn('ckqjbzBtn','d');
+			DisplayAndHiddenBtn('cktdbgBtn','d');
+			DisplayAndHiddenBtn('ckyxBtn','d');
+		}
+		
+		if ('$!{able}' == '0') {
+			DisplayAndHiddenBtn('previewBtn','d');
+		}
+		
+			//致电记录表格|全岗位放开
+			zdjl_grid = $('#zdjl_table').datagrid({
+				url : '${rc.contextPath}/busshow/loadCallResult',
+				//title:'借款人管理',
+				//fit : true,// 最大化，自适应屏幕
+				pagination : true,
+				nowrap: true,//设置为true，当数据长度超出列宽时将会自动截取
+				striped: true,//显示条纹
+				sortName: 'createDate',//当数据表格初始化时以哪一列来排序
+				sortOrder: 'desc',//定义排序顺序，可以是'asc'或者'desc'（正序或者倒序）
+				singleSelect : true,//设置为true将只允许选择一行
+				loadMsg:'正在加载数据.......',//当从远程站点载入数据时，显示的一条快捷信息
+				remoteSort: false,//定义是否通过远程服务器对数据排序
+				pageList:[5,10,15,20],
+				pageSize:5,
+				//fitColumns:true,//自适应列宽
+				rownumbers:true,//显示行数
+				queryParams: {
+					barCode:barCode
+				},
+				columns : [ [
+					{field:'answerPerson', title:'接听人', width:"80", sortable:false, align:'left',halign:'center'},  
+					{field:'telephone', title:'电话号码', width:"100", sortable:false, align:'left',halign:'center'}, 
+					{field:'callResult', title:'电核结果', width:"235", sortable:false, align:'left',halign:'center',
+						formatter: function(value,row,index, dict){
+	            		var sDict = dict['CALL_RESULT'];
+	            		value = sDict[value] ? sDict[value] : value;
+// 	            		row['loanType'] = value;
+	    				return value;
+    				}},
+					{field:'remark', title:'拨打备注', width:"100", sortable:false, align:'center',halign:'center'},
+	                {field:'createId', title:'拨打人', width:"100", sortable:false, align:'left',halign:'center'},
+					{field:'createDate',title:'拨出时间',width:"150",sortable:true,align:'center',halign:'center'}
+				]]
+			}); 
+			
+		if(nodeId == 'A06' || nodeId == 'A061'){
+			
+			if('$!{able}' == '1'){
+				DisplayAndHiddenBtn('tiJiaoBtn_dhg','d');
+				DisplayAndHiddenBtn('baoCunBtn_dhg','d');
+				DisplayAndHiddenBtn('baoCunBtn_dhg','d');
+				DisplayAndHiddenBtn('refuseBtn_dhg','d');
+				DisplayAndHiddenBtn('tuihuiBtn_dhg','d');
+				if(nodeId == 'A06' ){
+			    DisplayAndHiddenBtn('dhgqBtn_dhg','d');	
+				}
+				else{
+					DisplayAndHiddenBtn('qxgqBtn_dhg','d');		
+				}
+			}
+			DisplayAndHiddenBtn('danBaoRenBtn_dhg','d');
+			DisplayAndHiddenBtn('previewBtn_dhg','d');
+			DisplayAndHiddenBtn('ckqjbzBtn_dhg','d');
+			DisplayAndHiddenBtn('ckyxBtn_dhg','d');
+			
+			
+/* 			DisplayAndHiddenBtn('contacts[1].SizeEqualOne','h');
+			DisplayAndHiddenBtn('contacts[1].id','h');
+			DisplayAndHiddenBtn('contacts[2].id','h');
+			DisplayAndHiddenBtn('contacts[1].SizeEqualThree','d');
+			DisplayAndHiddenBtn('contacts[2].SizeEqualThree','d');
+			DisplayAndHiddenBtn('contacts[3].SizeEqualThree','d'); */
+		}
+		var node = parseInt(nodeId.substring(1,3));
+		
+		if(node >= 3){
+ 			addTab('店长岗','../busshow/enterDzgPage?barCode='+barCode);
+		}
+		if(node >= 4){
+ 			addTab('省级分公司总经理岗','../busshow/enterSjfgszjlgPage?barCode='+barCode);
+		}
+		if(node >= 5){
+ 			addTab('资料审核岗','../busshow/enterZlshgPage?barCode='+barCode);
+		}
+		if(node >= 8){
+ 			addTab('组长岗','../busshow/enterZzhshgPage?barCode='+barCode);
+		}
+		if(node >= 9){
+ 			addTab('业务授权岗','../busshow/enterYwsqgPage?barCode='+barCode);
+		}
+		if(node >= 10){
+ 			addTab('领导授权岗','../busshow/enterLdsqgPage?barCode='+barCode);
+		}
+		if(node >= 11){
+ 			addTab('客服放款岗','../busshow/enterkffkPage?barCode='+barCode);
+		}
+		
+		daikuanlx = $('#loanType_add').combobox('getValue');
+
+		
+		grid = $('#pawn_table').datagrid({
+			url :'${rc.contextPath}/centershow/loadCars?barCode='+'$!{BBI.barCode}',
+			//title:'借款人管理',
+			fit : true,// 最大化，自适应屏幕
+			pagination : true,
+			nowrap: true,//设置为true，当数据长度超出列宽时将会自动截取
+			striped: true,//显示条纹
+			//sortName: 'mobilePhone',//当数据表格初始化时以哪一列来排序
+			//sortOrder: 'asc',//定义排序顺序，可以是'asc'或者'desc'（正序或者倒序）
+			singleSelect : true,//设置为true将只允许选择一行
+			loadMsg:'正在加载数据.......',//当从远程站点载入数据时，显示的一条快捷信息
+			remoteSort: false,//定义是否通过远程服务器对数据排序
+			pageList:[5,10,15,20],
+			pageSize:5,
+			//fitColumns:true,//自适应列宽
+			rownumbers:true,//显示行数
+			columns : [ [
+				{field:'plateNumber', title:'车牌号', width:"120", sortable:false, align:'left',halign:'center'}, 
+				{field:'vin', title:'车架号', width:"150", sortable:false, align:'left',halign:'center'},  
+				{field:'name',title:'车型',width:"350",align:'right',sortable:true},
+			    {field:'mileage',title:'行驶公里数',width:"100"},
+				{field:'sysEvaluate', title:'系统估价', width:"120", sortable:false, align:'left',halign:'center',
+					 styler: function (value, row, index) {
+			              return 'background-color:#A3A3A3;color:#0000EE';
+			           }
+			    }, 
+				{field:'manEvaluate', title:'人工估价', width:"120", sortable:false, align:'center',halign:'center',
+					formatter:function(value,row,index){
+					if(row.valSource == 2){
+						return value;
+					}else{
+						return "<font color='red'>未估价</font>";
+					}
+				}},
+			]],
+ 			view: detailview,
+			detailFormatter:function(index,row){
+				//return '<div class="ddv" style="padding:20px 0"></div>';
+				return '<div class="ddv"></div>';
+			},
+
+            onExpandRow: function(index,row){
+                var ddv = $(this).datagrid('getRowDetail',index).find('div.ddv');
+                //var id = $(this).datagrid('getRows')[index].id;
+                ddv.panel({
+                    border:false,
+                    cache:true,
+                    href:'${rc.contextPath}/centershow/toPawnDetails?index='+index,
+                    onLoad:function(){
+                        $('#pawn_table').datagrid('fixDetailRowHeight',index);
+                        $('#pawn_table').datagrid('selectRow',index);
+                        $('#pawn_table').datagrid('getRowDetail',index).find('form').form('load',row);
+                        var firstregeDate = row.firstregeDate;
+                        if(typeof(firstregeDate) !=  "undefined"){
+        					$("#firstregeDate_kz").val(firstregeDate.substring(0,10));
+        				}
+        				var purchaseDate = row.purchaseDate;
+        				if(typeof(purchaseDate) !=  "undefined"){
+        					$("#purchaseDate_kz").datebox("setValue", purchaseDate.substring(0,10));
+        				}
+        				var lastRegDate = row.lastRegDate;
+        				if(typeof(lastRegDate) !=  "undefined"){
+        					$("#lastRegDate_kz").datebox("setValue", lastRegDate.substring(0,10));
+        				}
+        				var releaseDate = row.releaseDate;
+        				if(typeof(releaseDate) !=  "undefined"){
+        					$("#releaseDate_kz").datebox("setValue", releaseDate.substring(0,10));
+        				}
+        				var asendDate = row.asendDate;
+        				if(typeof(asendDate) !=  "undefined"){
+        					$("#asendDate_kz").datebox("setValue", asendDate.substring(0,10));
+        				}
+        				var s = row.insureKind;
+        				if(typeof(s) !=  "undefined"){
+        					$('#insureKind_kz').combobox('setValues',s.split(','));
+        				}
+                    }
+                });
+                $('#pawn_table').datagrid('fixDetailRowHeight',index);
+            },
+			onLoadSuccess:function(data){
+				var name = '';
+				//保险扣款
+				var premiumDeduct = 0;
+				//年检扣款
+				var annual = 0;
+				//违章扣款
+				var violationDeduct = 0;
+				$.each(data.rows,function(index,row){
+					if (row.carId != null && row.carId.indexOf(row.brand) > -1) {
+						name += row.carId;
+					} else {
+						name += row.brand + row.carId;
+					}
+					premiumDeduct += row.premiumDeduct;
+					annual += row.annual;
+					violationDeduct += row.violationDeduct;
+				});
+				setTimeout(function(){
+					var loanTypeText = $('#loanType_add').combobox('getText');
+					if ($.trim($("#title").val()) == '') {
+						$("#title").val(name + loanTypeText);
+					}
+					$("#premiumDeduct").val(parseFloat(premiumDeduct.toFixed(2)));
+					$("#annual").val(parseFloat(annual.toFixed(2)));
+					$("#violationDeduct").val(parseFloat(violationDeduct.toFixed(2)));
+                },500); 
+		    }
+		});
+		
+		
+		
+		//还款方式
+		var repaymentStyle = 0;
+		//是否质押
+		var pledgeType = 0;
+		//车辆额度计算
+		$(document).ready(function () {
+			$("#loanType_add").combobox({
+				onChange: function (newValue,oldValue) {
+					
+					if (newValue == 1) {
+						$("input[name='borrow.pledgeType'][value='1']").attr("checked",true);
+						pledgeType = 1;	
+					} else {
+						$("input[name='borrow.pledgeType'][value='0']").attr("checked",true);
+						pledgeType = 0;
+					}
+					checkpledgeType(pledgeType);
+				}
+			});
+			
+		});
+		
+		//是否质押
+		if ('$!{CHARGE.pledgeType}' == 'true'){
+			$("input[name='borrow.pledgeType'][value='1']").attr("checked",true);
+			pledgeType = 1;		
+		}else{
+			$("input[name='borrow.pledgeType'][value='0']").attr("checked",true);
+			pledgeType = 0;
+		}
+		//还款方式
+		if ('$!{CHARGE.repaymentStyle}' == '1'){
+			repaymentStyle = 1;
+			$("input[name='borrow.repaymentStyle'][value='1']").attr("checked",true);  
+		}else{
+			repaymentStyle = 0;
+			$("input[name='borrow.repaymentStyle'][value='0']").attr("checked",true); 
+		}
+		
+		
+		
+		//初始化套餐datagrid
+		borrowPackageDataGridList = $("#borrowPackageDataGridList").datagrid({
+			
+ 			url:'${rc.contextPath}/charge/queryPackages',
+			//title:'FYTC',
+			//fit : true,// 最大化，自适应屏幕
+			pagination : true,
+			//height:'270',
+			nowrap: true,//设置为true，当数据长度超出列宽时将会自动截取
+			striped: true,//显示条纹
+			
+			//sortName: 'mobilePhone',//当数据表格初始化时以哪一列来排序
+			//sortOrder: 'asc',//定义排序顺序，可以是'asc'或者'desc'（正序或者倒序）
+			singleSelect : true,//设置为true将只允许选择一行
+			loadMsg:'正在加载数据.......',//当从远程站点载入数据时，显示的一条快捷信息
+			remoteSort: false,//定义是否通过远程服务器对数据排序
+			pageList:[5,10,15,20],
+			pageSize:5,
+			//fitColumns:true,//自适应列宽
+			rownumbers:true,//显示行数
+			queryParams: {
+				repaymentStyle: repaymentStyle,
+				pledgeType :pledgeType
+			},
+			columns : [[
+				{field : 'id', title : 'id',checkbox:true},
+				{field : 'title', title : '套餐名称', width:"620",sortable : true,align:'left'}
+				
+			]],
+			view: detailview,
+			detailFormatter:function(index,row){//注意2
+		    	return '<div class=""><table id="ddv-' + index + '"></table><center style="font-size: 14px;width:100%;">合计：￥<span packageId="'+row.id+'" name="appendRowPackage">0</span>元</center></div>';
+		    },
+		    onExpandRow:function(index,row){//注意3
+		    			//发标金额
+		    			var borrowAccount = parseFloat($("#currentAccount").val());
+		    
+		                detailPackage=$('#ddv-'+index).datagrid({
+		                    url:'${rc.contextPath}/charge/queryPackageDetails?id='+row.id+'&barCode='+barCode,
+		                    //fitColumns:true,
+		                    singleSelect:true,
+		                    rownumbers:true,//显示行数
+		                    height:'170',
+		                    columns:[[
+								//{field : 'id', title : '', width : 0, sortable : true,align:'left'},
+								{field : 'name', title : '收费名称', width:"110", sortable:true, align:'left',halign:'center'},
+								{field : 'note', title : '收费标准', width:"180", sortable : true,align:'left',
+									formatter:function(value, r, index){
+		                               	return "<span name='note' shouFeeName='"+r.name+"'  pid='"+row.id+"'>"+value+"</span>";
+		                        	}
+								},
+								{field : 'algo1',hidden:true},
+								{field : 'algo2',hidden:true},
+								{field : 'packageId',hidden:true},
+								{field : 'deductType',hidden:true},
+								{field : 'isEditable',hidden:true},
+								{field : 'fee', title : '实际金额', width:"200",sortable : true,align:'left',
+									formatter:function(value, r, index){
+										var span = '';
+										var tdContext = '';
+										var fee = r.fee;
+										if (detailFlag || '${packageId}' == r.packageId) {
+											if (r.algo1 != null && r.algo1.indexOf("proportion") > -1 && borrowAccount > 0) {
+												fee = (r.fee / borrowAccount * 100).toFixed(2);
+											}
+										}
+										if(parseFloat(value) <= 0){
+											tdContext = '<a style="color: red;" shouFeeName="'+r.name+'" href="javascript:;" isEditable="'+r.isEditable+'" pledgeType="'+row.pledgeType+'"  repaymentStyle="'+row.repaymentStyle+'" deductTime="'+r.deductTime+'" deductType="'+r.deductType+'" algo1="'+r.algo1+'" algo2="'+r.algo2+'" feename="'+r.name+'" name="fee" pid='+row.id+' feeMoney='+fee+' thisId='+r.id+' onclick="update(this,'+index+')">'+value.toFixed(2)+'</a>';
+										}else{
+											tdContext = '<a href="javascript:;" shouFeeName="'+r.name+'" isEditable="'+r.isEditable+'" pledgeType="'+row.pledgeType+'"  repaymentStyle="'+row.repaymentStyle+'" deductTime="'+r.deductTime+'" deductType="'+r.deductType+'" algo1="'+r.algo1+'" algo2="'+r.algo2+'" feename="'+r.name+'" name="fee" pid='+row.id+' feeMoney='+fee+' thisId='+r.id+' onclick="update(this,'+index+')">'+value.toFixed(2)+'</a>';
+										}
+										if(r.deductType == '0'){
+											span = '<span>每月 ￥</span>'
+										}else{
+											span = '<span>一次性 ￥</span>';
+										}
+		                               	return span+tdContext;
+		                        	}
+								},
+								{field : 'deductTime', title : '扣费时间', width:"100", sortable : true,align:'left'}
+		                    ]],
+		                    onResize:function(){
+		                        $('#borrowPackageDataGridList').datagrid('fixDetailRowHeight',index);
+		                    },
+		                    onLoadSuccess:function(data){
+		                        setTimeout(function(){
+		                            $('#borrowPackageDataGridList').datagrid('fixDetailRowHeight',index);
+		                        },0);
+		                        if (!detailFlag) {
+			                       setTimeout(function(){
+			                           updateDongJie();
+			                       },500); 
+		                        }
+		                        setTimeout(function(){
+		                           	updatePackageSum(row);
+		                        },500); 
+								if (detailFlag) {
+									var capital = parseFloat($("#currentAccount").val());
+									var inrterest = parseFloat(computInterestByRepayStyle(capital));
+									var baoXianOrTingChe = 0;
+									var rateFlag = false;
+									var upfee = 0;
+									$.each(data.rows,function(index,row) {
+							   			if((row.name=='风险金' || row.name=='停车费')){
+							   				baoXianOrTingChe = parseFloat(row.fee);
+							   			}
+										if (row.algo1 != null && row.algo1.indexOf("rate") > -1 && borrowAccount > 0) {
+											rateFlag = true;
+											upfee = row.fee;
+										}
+									});
+									if (rateFlag) {
+										//推算比例
+										var rate = ((upfee+baoXianOrTingChe+inrterest)/capital*100).toFixed(2);
+										$("#rate").val(parseFloat(rate));
+									}
+								}
+								detailFlag = false;
+		                    }
+		                    
+		                });
+		               $('#borrowPackageDataGridList').datagrid('fixDetailRowHeight',index);
+		                //需要计算实际收费金额
+						computPackageDetail($("#currentAccount").val());
+			},
+ 		    onLoadSuccess:function(data){
+ 		    	
+ 		    	
+ 		    	var rows = data.rows;
+ 		    	var length = rows.length;
+ 		    	var rowIndex = 0;
+ 		    	for (var i = 0;i < length; i ++) {
+ 		    		if ('$!{packageId}' == rows[i].id) {
+ 		    			rowIndex = i;
+ 		    		}
+ 		    	}
+ 		    	borrowPackageDataGridList.datagrid("checkRow",rowIndex);
+	    	    //borrowPackageDataGridList.datagrid("expandRow",2);
+		    }, 
+		    onCheck:function(rowIndex,rowData){
+			  	var pledgeType = '(质押)';
+				if($("#pledgeTypeNo").attr("checked")){
+					pledgeType = '(抵押)';
+				}
+				var repaymentStyle = '等额本息';
+				if($("#repaymentStyle").attr("checked")){
+					repaymentStyle = '月还息到息还本';
+				}
+				$("#promptPackage").text(rowData.title);
+				borrowPackageDataGridList.datagrid("expandRow",rowIndex);
+				updateDongJie();
+				setTimeout(function(){
+					var isRenew = "";
+		            if($("#isRenewLoanNo").attr('checked') == 'checked'){  
+		            	isRenew = '0';
+		            }else{
+		            	isRenew = '1';
+		            }
+				},800);
+		    }
+		}) 
+		
+		
+		
+		
+		if('$!{BRW.sex}'==0){
+			$('#sex_sqb').val('男');
+		}else if('$!{BRW.sex}'== 1){
+			$('#sex_sqb').val('女');
+		}
+		
+		//投资人利率
+		if ('$!{CHARGE.borrowAnnualYield}'){
+			$('#borrowAnnualYield').val(parseFloat('$!{CHARGE.borrowAnnualYield}'));
+		}
+		//借款人利率
+		if ('$!{CHARGE.borrowerAnnualYield}'){
+			$('#borrowapr').val(parseFloat('$!{CHARGE.borrowerAnnualYield}'));
+			
+		}
+		
+		//借款金额、发标金额
+		if ('$!{CHARGE.borrowAmount}'){
+			var count = parseFloat('$!{CHARGE.borrowAmount}');
+			$('#currentAccount').val(count);
+			if(isNaN(count) || count < 1){
+				$("#fabiao_account").html("0元");
+				$("#fabiao_account").css("color","2828FF");
+			}else{
+				if(count >= 10000 && count < 100000000){
+					$("#fabiao_account").html((count/10000).toFixed(2)+"万");
+					$("#fabiao_account").css("color","#006000");
+				}else if(count >= 100000000){
+					$("#fabiao_account").html((count/100000000).toFixed(2)+"亿");
+					$("#fabiao_account").css("color","red");
+				}else{
+					$("#fabiao_account").html(count+"元");
+					$("#fabiao_account").css("color","2828FF");
+				}
+			}
+		}
+		//借款周期、发标周期
+		if ('$!{CHARGE.borroePeriod}'){
+			$('#zhouqi').val('$!{CHARGE.borroePeriod}');
+		}
+		//手投最低金额
+		if ('$!{CHARGE.tenderMinAmount}'){
+			$('#tenderMinAmount').val(parseFloat('$!{CHARGE.tenderMinAmount}'));
+		}
+		//手投最高金额
+		if ('$!{CHARGE.tenderMaxAmount}'){
+			$('#tenderMaxAmount').val(parseFloat('$!{CHARGE.tenderMaxAmount}'));
+		}
+		//允许投标天数
+		if ('$!{CHARGE.validTenderDays}'){
+			$('#validTenderDays').val('$!{CHARGE.validTenderDays}');
+		}
+		//奖励比例
+		if ('$!{CHARGE.awardAmonut}'){
+			$('#award').val(parseFloat('$!{CHARGE.awardAmonut}'));
+		}
+		//冻结保证金
+		if ('$!{CHARGE.deposit}'){
+			$('#deposit').val(parseFloat('$!{CHARGE.deposit}'));
+			$('#dongjieApr').val((parseFloat('$!{CHARGE.deposit}')/parseFloat('$!{CHARGE.borrowAmount}')).toFixed(2));
+			
+		}
+		
+		//天标或者月标 默认月标
+		if ('$!{CHARGE.periodTimeUnit}' == '0'){
+			$("input[name='borrow.periodTimeUnit'][value='0']").attr("checked",true); 
+		}else{
+			$("input[name='borrow.periodTimeUnit'][value='1']").attr("checked",true);
+		}
+		
+		//首期预扣
+		if ('$!{CHARGE.isFirstPre}' == 'false'){
+			$("input[name='borrow.isFirstPre'][value='0']").attr("checked",true); 
+		}else{
+			$("input[name='borrow.isFirstPre'][value='1']").attr("checked",true); 
+		}
+		
+		//是否续贷
+		if ('$!{CHARGE.isRenewLoan}' == 'true'){
+			$("input[name='borrow.isRenewLoan'][value='1']").attr("checked",true); 
+		}else{
+			$("input[name='borrow.isRenewLoan'][value='0']").attr("checked",true);  
+		}
+		//贷款手续
+		/* var loanFormal = $('#loanFormal_add').combobox('getValue');
+ 		//贷款类型
+		var loanType = $('#loanType_add').combobox('getValue');
+ 		if (loanFormal && loanType) {
+ 			initBorrowAmount();
+ 		} */
+		//initBorrowInfo();
+	});
+	
+	function initBorrowAmount(){
+		//车辆额度
+		var carLimit = $("#carLimit_add").val() * 1;
+		//临时额度
+		var tempLimit = $("#tempLimit_add").val() * 1;
+		//担保特批额度
+		var guarLimit = $("#guarLimit_add").val() * 1;
+		//车牌信用额度
+		var platenoLimit = $("#platenoLimit_add").val() * 1;
+		$("#currentAccount").val(parseFloat((carLimit + tempLimit + guarLimit + platenoLimit).toFixed(2)));
+		updateDongJie();
+	}
+	
+	//抵押物详情视图保存操作
+	function saveItem(index){
+		if($('#pawnForm').form('validate')){
+			$.messager.confirm("提示", "您确定要执行此操作吗？", function (res) {
+	            if (res) {
+	            	//var row = $('#pawn_table').datagrid('getRows')[index];
+	        		var url = '${rc.contextPath}/pawn/updatePawnByFlow';
+	        		var total_data = $.serializeObject($('#pawnForm'));
+	        		$.post(url, total_data, function(obj) {
+	        			if (obj.success) {
+	        				$('#pawn_table').datagrid('reload'); 
+	        				$("#pawnForm").form("clear");
+	        				$.messager.alert('提示', obj.message, 'info');
+	        			}else{
+	        				$.messager.alert('提示', obj.message, 'error');
+	        			}
+	        		}, 'json');
+	            }
+			});
+		}
+	}
+	
+	//抵押物详情视图取消操作
+	function cancelItem(index){
+		var row = $('#pawn_table').datagrid('getRows')[index];
+		if (row.isNewRecord){
+			$('#pawn_table').datagrid('deleteRow',index);
+		} else {
+			$('#pawn_table').datagrid('collapseRow',index);
+		}
+	}
+	
+	function myformatter(date){
+		var y = date.getFullYear();
+        var m = date.getMonth()+1;
+        var d = date.getDate();
+        return y+'-'+(m<10?('0'+m):m)+'-'+(d<10?('0'+d):d);
+    }
+    
+    function myparser(s){
+        if (!s) return new Date();
+        var ss = (s.split('-'));
+        var y = parseInt(ss[0],10);
+        var m = parseInt(ss[1],10);
+        var d = parseInt(ss[2],10);
+        if (!isNaN(y) && !isNaN(m) && !isNaN(d)){
+            return new Date(y,m-1,d);
+        } else {
+            return new Date();
+        }
+    }
+    
+  	//借款周期onKeyUp事件
+    function updatePackage(){
+    	var period = parseInt($("#zhouqi").val());
+    	if(isNaN(period)){
+    		period = 1;
+    		$("#zhouqi").val(period);
+    	}
+  		var periodTimeUnit = $('input:radio[name="borrow.periodTimeUnit"]:checked').val();
+  		var repaymentStyle = $('input:radio[name="borrow.repaymentStyle"]:checked').val();
+  		if (repaymentStyle == 0 && periodTimeUnit == 1 && period > 6) {
+  			$("#zhouqi").val(6);
+  		} else if (repaymentStyle == 0 && periodTimeUnit == 0 && period > 31) {
+  			$("#zhouqi").val(31);
+  		}
+    	var rows = borrowPackageDataGridList.datagrid('getChecked');
+    	updatePackageSum(rows[0]);
+    	var capital = parseFloat($("#currentAccount").val());
+    	computInterestByRepayStyle(capital);
+    	changeVipFee();
+    }
+    
+	//页面默认加载当前日期
+ 	$(function(){
+ 		//设置时间
+ 	   var curr_time = new Date();   
+ 	   $("#tbrq").datebox("setValue",myformatter(curr_time));
+ 	});
+	
+	
+	
+	//校验手机
+ 	function checkMobile(){
+		var tel = $("#mobile_add").val();
+		if(/^(13|15|18|17|14)\d{9}$/i.test(tel)){
+			var param = {mobile:tel,custId:'$!{BBI.custId}'};
+			var url = "${rc.contextPath}/busshow/checkTel";
+			$.post(url, param, function(obj) {
+				if (obj.success) {
+					return;
+				} else {
+					$.messager.alert('提示', obj.message, 'error');
+					return;
+				}
+			}, 'json'); 
+		}
+		
+	}
+	
+	//保存提交初审岗信息
+	function saveCsxx(state) {
+
+		if(state == 1){
+
+            //提交之前校验
+            if(!valid()){
+                return false;
+            }
+            
+			var vali = $('#total_form').form('validate');
+			if(!vali){
+				return;
+			}
+		}
+		
+		var tel = $("#mobile_add").val();
+		if(/^(13|15|18|17|14)\d{9}$/i.test(tel)){
+			$.messager.confirm("提示", "您确定要执行此操作吗？", function (res) {//提示是否提交数据
+	            if (res) {
+	            	
+	        		var fbje = parseFloat($("#currentAccount").val());
+	        		$('#loanAmount_add').val(fbje);
+	        		
+	        		/* var url = '${rc.contextPath}/bussave/saveFirstTrial?state=' + state;
+	        		var url_lxr = '${rc.contextPath}/bussave/saveContacts';
+	        		var url_charge = '${rc.contextPath}/charge/saveCharge';
+	        		
+	        		var resObj_fy = $.serializeObject($('#fm_feiyong'));
+	        		var resObj_sqb = $.serializeObject($('#fm_shenqing'));
+	        		var qtlxr_obj = $.serializeObject($('#fm_qtlxr')); */
+	        		
+	        		if ($('#borrowPackageDataGridList').datagrid('getSelections').length == 1) {
+	        			var detailRows = detailPackage.datagrid("getRows"); //这段代码是获取当前页的所有行
+	        			var packageDetailJson = JSON.stringify(detailRows);
+	        			$("#packageDetailJson").val(packageDetailJson);
+	        			var total_data = $.serializeObject($('#total_form'));
+	        			var url = '${rc.contextPath}/bussave/saveFirstTrial?state=' + state;
+	        			$.post(url, total_data, function(obj) {
+	        				if (obj.success) {
+	        					$.messager.alert('提示', obj.message,'info');
+	        					if(state == 1){
+	        						location.href="${rc.contextPath}/busshow/toList?nodeId=A01";
+	        					}else{
+	        						if(obj.dataModel.OTH){
+	                					callShowQtlxr(obj.dataModel.OTH);
+	                				}
+	                				if(obj.dataModel.FML){
+	                					callShowJtqk(obj.dataModel.FML);
+	                				}
+	        					}
+	        				}else{
+	        					$.messager.alert('提示', obj.message, 'error');
+	        					return;
+	        				}
+	        				
+	                        
+	        			}, 'json');
+	        		}
+	            }
+	        });
+		}else{
+			$.messager.alert('提示','手机号必输');
+		}
+
+	}
+	
+	//保存提交电核岗信息
+	function saveDhgxx(state) {
+ 		if(state == 0){
+			$.messager.alert('提示', '保存成功', 'info');
+		}
+ 		if(state == 1){
+ 			$.ajax({
+    			type : "post",
+    			url : '${rc.contextPath}/busshow/checkCall',
+    			data : {
+    				barCode : barCode
+    			},
+    			async : false,
+    			dataType : "json",
+    			success : function(data) {
+    				if (data.success){  
+    					subDHG(state);
+//     	                $.messager.alert('提示',data.message,'info');
+    				}else{
+    					$.messager.alert('提示',data.message,'error');
+    					return;
+    				} 
+    			}
+ 			})
+		}
+	}
+	
+	function subDHG(state){
+		$.messager.confirm("提示", "您确定要执行此操作吗？", function (res) {//提示是否提交数据
+            if (res) {
+            	$.ajax({
+        			type : "post",
+        			url : '${rc.contextPath}/bussave/saveCallNode?state=' + state,
+        			data : {
+        				nodeId : nodeId,
+        				barCode : barCode
+        			},
+        			async : false,
+        			dataType : "json",
+        			success : function(data) {
+        				if (data.success){  
+        	                $.messager.alert('提示',data.message,'info');
+        	                if(state == 1){
+        						location.href="${rc.contextPath}/busshow/toList?nodeId=A06";
+        					}else{
+        						return;
+        					}
+        	            } else {  
+        	            	$.messager.alert('提示',data.message,'error');
+        	            }  
+        			}
+        		});
+            }
+        });
+	}
+	
+	function valid(){
+/* 		var tempLimit = $("#tempLimit_add").val();//临时额度
+		var finalLimit = $("#finalEvaluate_add").val();//最终额度
+		var carLimit = $("#carLimit_add").val();//车辆额度
+		var guarLimit = $("#guarLimit_add").val();//特批额度
+		var platenoLimit = $("#platenoLimit_add").val();//车牌信用额度 */
+		
+		var marriage = $('#marriage_sqb').combobox('getValue');//婚姻状况
+		var cfc = '$!{BRW.sealupState}';//是否查封车
+		
+/* 		if((Number(carLimit) + Number(tempLimit) + Number(guarLimit)) > Number(finalLimit) + Number(platenoLimit)){
+			$.messager.alert('提示','车辆额度  + 临时额度  + 担保/特批额度不能大于 最终额度 与车牌信用额度之和');
+			return false;
+		}
+		if(tempLimit > finalLimit * 0.1){
+			$.messager.alert('提示','临时额度不能超过最终估价的10%');
+			return false;
+		} */
+		
+		if(cfc == '1' && daikuanlx =='0'){
+			$.messager.alert('提示','查封车只可办理质押');
+			return false;
+		}
+        
+      //提交前校验车辆额度输入超出范围
+/* 		var currentValue = $('#carLimit_add').val();
+		if(currentValue > newCarLimit){
+			$.messager.alert('提示','车辆额度超出范围');
+			return false;
+		} */
+		
+        //家族情况必需有二条记录
+        var jtqkTrCount = 0;
+        $('table#addtr_jtqk tr').each(function(trIndex, tr){
+
+            var tdCount = 0;
+            $(tr).find('td > input:text[name^="contacts"]').each(function(tdIndex){
+                if(tdIndex < 2){
+                    if($(this).val() != ""){
+                        tdCount++;
+                    }
+                }
+            });
+            $(tr).find('input[name$="relationType"]').each(function(index){
+                if($(this).val() != ""){
+                    tdCount++;
+                }
+            });
+            if(tdCount == 3){
+                jtqkTrCount++;
+            }
+        });
+        if(jtqkTrCount < 2){
+            $.messager.alert('提示','家族情况必需填写两条以上信息');
+            return false;
+        }
+
+
+        //其它联系人必需有二条记录
+        var qtlxrTrCount = 0;
+        $('table#addtr_qtlxr tr').each(function(trIndex, tr){
+
+            var tdCount = 0;
+            $(tr).find('td > input:text[name^="contacts"]').each(function(tdIndex){
+                if(tdIndex < 2){
+                    if($(this).val() != ""){
+                        tdCount++;
+                    }
+                }
+            });
+            $(tr).find('input[name$="relationType"]').each(function(index){
+                if($(this).val() != ""){
+                    tdCount++;
+                }
+            });
+            if(tdCount == 3){
+                qtlxrTrCount++;
+            }
+        });
+
+        if(qtlxrTrCount < 2){
+            $.messager.alert('提示','其它联系人必需填写两条以上信息');
+            return false;
+        }
+        return true;
+	};
+
+	function callShowQtlxr(data){
+        var idIndex = 0;
+        $('table#addtr_qtlxr tr').each(function(trIndex, tr){
+
+            var tdCount = 0;
+            $(tr).find('td > input:text[name^="contacts"]').each(function(tdIndex){
+                if($(this).val() != ""){
+                    tdCount++;
+                }
+            });
+            $(tr).find('input[name$="relationType"]').each(function(index){
+                if($(this).val() != ""){
+                    tdCount++;
+                }
+            });
+
+			//当tr中任意一个td有值时，给隐藏的id 赋值
+            if(tdCount > 0){
+               	$(tr).find('td > input:hidden[name$="id"]').val(data[idIndex]);
+                idIndex++;
+            }
+        });
+	}
+	
+	function callShowJtqk(data){
+		var idIndex = 0;
+        $('table#addtr_jtqk tr').each(function(trIndex, tr){
+
+            var tdCount = 0;
+            $(tr).find('td > input:text[name^="contacts"]').each(function(tdIndex){
+                    if($(this).val() != ""){
+                        tdCount++;
+                    }
+            });
+            $(tr).find('input[name$="relationType"]').each(function(index){
+                if($(this).val() != ""){
+                    tdCount++;
+                }
+            });
+
+            //当tr中任意一个td有值时，给隐藏的id 赋值
+            if(tdCount > 0){
+                $(tr).find('td > input:hidden[name$="id"]').val(data[idIndex]);
+                idIndex++;
+            }
+        });
+	}
+	
+	//切换
+	function setTabAll(id){
+		if ($("#"+id).hasClass("show_content") ){
+			$("#"+id).removeClass("show_content");
+		} else {
+			$("#"+id).addClass("show_content");
+			//$("#"+id).show();
+		}
+	}
+	
+	// 弹出 担保人信息编辑窗口
+/*     function submitDbr() {
+        $("#dlg_dbr").dialog("open").dialog('setTitle', 'weidai.com.cn'); 
+        dbrUrl = "${rc.contextPath}/bussave/saveBondsman";
+    } */
+	
+
+	//增加选项卡
+	function addTab(title, url){
+		if ($('#tt').tabs('exists', title)){
+			$('#tt').tabs('select', title);
+		} else {
+			var content = '<iframe scrolling="auto" frameborder="0"  src="'+url+'" style="width:100%;height:100%;"></iframe>';
+			$('#tt').tabs('add',{
+				title:title,
+				content:content,
+				closable:false
+			});
+		}
+	}
+	
+	//跳转全局备注
+	function openQjbz(){
+		parent.sy.modalDialog({
+			width:860,
+            height:350,
+            title : '全局备注',
+            url : '${rc.contextPath}/busshow/toGlobalNote?barCode='+'$!{BBI.barCode}'
+        });
+		
+	}
+	
+	//初审岗跳转担保人信息
+	function openBondsman(){
+ 		dbrDialog = parent.sy.modalDialog({
+			width:1000,
+            height:540,
+            title : '担保人信息',
+            url : '${rc.contextPath}/busshow/toBondsman?custId='+'$!{BBI.custId}',
+            buttons : [{
+	             text : '保存',
+	             iconCls : 'icon-ok',
+	             handler : function() {
+	            	 dbrDialog.find('iframe').get(0).contentWindow.submitForm(dbrDialog);
+	             }
+	         }, {
+                text : '关闭',
+                iconCls : 'icon-no',
+                handler : function() {
+                	dbrDialog.dialog('destroy');
+                }
+            }] 
+        }); 
+        /*$("#dlg_dbr").dialog("open");*/
+	}
+	
+	
+	//电核岗跳转担保人信息
+	function openBondsmanDHG(){
+ 		dhgDialog = parent.sy.modalDialog({
+			width:1350,
+            height:200,
+            title : '担保人信息',
+            url : '${rc.contextPath}/busshow/toBondsmanList?custId='+'$!{BBI.custId}',
+        });
+		
+	}
+	
+	//跳转查看影像
+	function openImage(){
+		imagDialog = parent.sy.modalDialog({
+            height:400,
+            title : '添加参数',
+            url : '${rc.contextPath}/fileUpload/toUpload?pid='+'$!{BBI.barCode}',
+            buttons : [ {
+                text : '关闭',
+                iconCls : 'icon-no',
+                handler : function() {
+                	imagDialog.dialog('destroy');
+                }
+            }]
+        });
+	}
+	
+	// 跳转拨打电话窗口
+    function call(node,type) {
+		
+		if(nodeId == "A06" || nodeId == 'A061'){
+			callType = type;
+			$('#phoneNumber_add').val(node);
+	        $("#boda_dialog").dialog("open");
+		}else{
+			$.messager.alert('提示', '无权限操作', 'error');
+		}
+    }
+	
+	//【电核岗】跳出退回弹出框
+	function openSendBackDlg_dhg(){
+		
+		dialog = parent.sy.modalDialog({
+			width:350,
+            height:200,
+            title : '取消/拒绝窗口',
+            url : '${rc.contextPath}/busshow/sendBack?barCode='+barCode+'&nodeId='+nodeId,
+            buttons : [{
+	             text : '提交',
+	             iconCls : 'icon-ok',
+	             handler : function() {
+	            	 dialog.find('iframe').get(0).contentWindow.submitForm(dialog);
+	            	 setTimeout(function(){
+	            		 window.location.href='../busshow/toList?nodeId='+nodeId
+	            		 dialog.dialog('destroy');
+	             	 }, 500);
+	             }
+	         }, {
+	             text : '关闭',
+	             iconCls : 'icon-no',
+	             handler : function() {
+	            	 dialog.dialog('destroy');
+	             }
+           }] 
+        });
+	}
+	
+	// 返回岗位列表
+    function goBack() {
+    	location.href="${rc.contextPath}/busshow/toList?nodeId=A01";
+    }
+	
+	function goBackToDhglb(){
+		location.href="${rc.contextPath}/busshow/toList?nodeId=A06";
+	}
+	
+	//初审岗取消按钮弹出框
+    function openSendBackDlg_csg(state){
+		csgDialog = parent.sy.modalDialog({
+			width:350,
+            height:140,
+            title : '取消/拒绝窗口',
+            url : '${rc.contextPath}/bussave/toCancel?barCode='+barCode,
+            buttons : [{
+	             text : '提交',
+	             iconCls : 'icon-ok',
+	             handler : function() {
+	            	 csgDialog.find('iframe').get(0).contentWindow.submitForm(csgDialog,state);
+	            	 setTimeout(function(){
+	            		 window.location.href='../busshow/toList?nodeId='+nodeId
+	            		 csgDialog.dialog('destroy');
+	             	 }, 500);
+	             }
+	         }, {
+	             text : '关闭',
+	             iconCls : 'icon-no',
+	             handler : function() {
+	             	csgDialog.dialog('destroy');
+	             }
+           }] 
+        });
+	} 
+	
+/* 	function quxiao_csg(){
+		$.abolish(barCode,'A01');
+	} */
+	
+	//电核岗拒绝动作
+/* 	function refuse_dhg(){
+		$.refuse(barCode,'A06');
+	} */
+	
+	///电核岗拒绝按钮弹出框
+	function refuse_dhg(state){
+		dhgDialog = parent.sy.modalDialog({
+			width:350,
+            height:140,
+            title : '拒绝窗口',
+            url : '${rc.contextPath}/bussave/toCancel?barCode='+barCode,
+            buttons : [{
+	             text : '提交',
+	             iconCls : 'icon-ok',
+	             handler : function() {
+	            	 dhgDialog.find('iframe').get(0).contentWindow.submitForm(dhgDialog,state);
+	            	 setTimeout(function(){
+	            		 window.location.href="../busshow/toList?nodeId="+'A06'
+	            		 dhgDialog.dialog('destroy');
+	             	 }, 500);
+	             }
+	         }, {
+	             text : '关闭',
+	             iconCls : 'icon-no',
+	             handler : function() {
+	            	 dhgDialog.dialog('destroy');
+	             }
+           }] 
+        });
+	}
+	
+	var callType;
+	//保存致电记录
+    function saveCallRecords() {
+		
+		if($('#fm').form('validate')){
+			$("#barCode_call").val("$!{BBI.barCode}");
+			$("#callType").val(callType);
+    		var dbrObj = $.serializeObject($('#fm'));
+    		$.post('${rc.contextPath}/bussave/saveCallResult', dbrObj, function(data) {
+    			if (data.success) {
+    				$.messager.alert('提示', data.message, 'info');
+    				$("#fm").form("clear");
+    				$("#boda_dialog").dialog("close");
+    				$("#zdjl_table").datagrid('reload');
+    				setTimeout(function(){
+    		              $(".tooltip-right").remove();
+    		            },200);
+    				return;
+    			} else {
+    				$.messager.alert('提示', data.message, 'error');
+    				return;
+    			}
+    		}, 'json');
+    	}
+    }
+    
+	//评分
+    function pingFen() {
+		
+		
+ 		if($('#mobile_add').val().length == 11){
+ 			
+ 			
+ 			
+ 			var daikaishouxu = $('#loanFormal_add').val();
+ 			/* 		var daikuansx = $('#loanFormal_edxx').combobox('getValue'); 
+ 			if(daikuanlx === 1 || daikuansx == 2){//贷款类型为质押 或 贷款手续为过户
+ 				DisplayAndHiddenBtn('pingfenBtn','h');
+ 				DisplayAndHiddenBtn('cktdbgBtn','h');
+ 			} else {
+ 				DisplayAndHiddenBtn('pingfenBtn','d');
+ 				DisplayAndHiddenBtn('cktdbgBtn','d');
+ 			}	 */	
+ 			
+			$.ajax({
+				type : "post",
+				url : '${rc.contextPath}/bussave/saveTDReportId',
+				data : {
+					phoneNumber :$('#mobile_add').val(),
+					name : '$!{BBI.custName}',
+					idCard : '$!{BRW.idNumber}',
+					orderId : '$!{BBI.barCode}'
+				},
+				async : false,
+				dataType : "json",
+				success : function(data) {
+					if (data.success){  
+		                $.messager.alert('提示',data.message,'info');
+		            } else {  
+		            	$.messager.alert('提示',data.message,'error');
+		            }  
+				}
+			});
+ 		} else {
+ 			$.messager.alert('提示', '请输入正确手机号', 'error');
+		}
+    }
+	
+	//跳转资信报告信息
+	function openTdbg(){
+		tongDundlg = parent.sy.modalDialog({
+			width:700,
+            height:400,
+            title : '资信报告',
+            url : '${rc.contextPath}/busshow/loadTongDunReport?barCode='+'$!{BBI.barCode}',
+            buttons : [ {
+	             text : '关闭',
+	             iconCls : 'icon-no',
+	             handler : function() {
+	            	 tongDundlg.dialog('destroy');
+	             }
+	         } ]
+        });
+		
+	}
+	
+	//根据还款方式修改冻结金额
+	function updateDongJie(){
+		//初始化固定月利率
+		var rate = parseFloat($("#rate").val());
+		if(isNaN(rate)){
+			$("#rate").val(0);
+		}else{
+			$("#rate").val(rate);
+		}
+		var period = parseFloat($("#zhouqi").val());
+		var periodTimeUnit = $('input:radio[name="borrow.periodTimeUnit"]:checked').val();
+  		var repaymentStyle = $('input:radio[name="borrow.repaymentStyle"]:checked').val();
+		if(isNaN(period)){
+			$("#zhouqi").val(1);
+		}else if (repaymentStyle == 0 && periodTimeUnit == 1 && period > 6) {
+  			$("#zhouqi").val(1);
+  		} else if (repaymentStyle == 0 && periodTimeUnit == 0 && period > 31) {
+  			$("#zhouqi").val(1);
+		}else{
+			$("#zhouqi").val(period);
+		}
+		//贷款金额
+		var count = parseFloat($("#currentAccount").val());
+		//车辆额度
+		var carLimit = $("#carLimit_add").val() * 1;
+		//临时额度
+		var tempLimit = $("#tempLimit_add").val() * 1;
+		//担保特批额度
+		var guarLimit = $("#guarLimit_add").val() * 1;
+		//车牌信用额度
+		var platenoLimit = $("#platenoLimit_add").val() * 1;
+		//最终额度
+		var finalEvaluate = $("#finalEvaluate_add").val() * 1;
+		//借款额度 = 车辆额度 + 临时额度 + 担保特批额度
+		var loanLimit = parseFloat((carLimit + tempLimit + guarLimit).toFixed(2));
+		//最大借款金额
+		var maxLimit = parseFloat((loanLimit + platenoLimit).toFixed(2));
+		//如果借款额度超出最终额度,借款金额 = 最终额度+车牌额度
+		if (loanLimit >= finalEvaluate) {
+			$("#currentAccount").val(parseFloat((finalEvaluate + platenoLimit).toFixed(2)));
+			count = parseFloat((finalEvaluate + platenoLimit).toFixed(2));
+		//如果借款金额不能大于车辆额度 + 临时额度 + 担保特批额度+车牌额度
+		} else if (count > maxLimit) {
+			$("#currentAccount").val(maxLimit);
+			count = maxLimit;
+		}
+		var apr = parseFloat($("#dongjieApr").val());
+		//设置冻结金额
+		setFreeze(count,apr);
+		if(isNaN(count) || count < 1){
+			$("#fabiao_account").html("0元");
+			$("#fabiao_account").css("color","2828FF");
+		}else{
+			if(count >= 10000 && count < 100000000){
+				$("#fabiao_account").html((count/10000).toFixed(2)+"万");
+				$("#fabiao_account").css("color","#006000");
+			}else if(count >= 100000000){
+				$("#fabiao_account").html((count/100000000).toFixed(2)+"亿");
+				$("#fabiao_account").css("color","red");
+			}else{
+				$("#fabiao_account").html(count+"元");
+				$("#fabiao_account").css("color","2828FF");
+			}
+		}
+		//根据还款方式计算利率
+		var interest = this.computInterestByRepayStyle(count);
+		//需要计算实际收费金额
+		this.computPackageDetail(count,interest);
+		var rows = borrowPackageDataGridList.datagrid('getChecked');
+		updatePackageSum(rows[0]);
+	}
+	
+	/**
+	 * 天标标或者月标单机事件（用于修改显示的利率）
+	 */
+	 function changeInterest(dayOrMonth){
+		 var count = parseFloat($("#currentAccount").val());
+		//根据还款方式计算利率
+		this.computInterestByRepayStyle(count);
+		updateDongJie();
+		if(dayOrMonth=='0'){
+			//$("#isFirstPre").attr("checked","checked");
+			var period = parseInt($("#zhouqi").val());
+			if(period > 31){
+				$("#zhouqi").val(31)
+			}
+		}
+		var rows = borrowPackageDataGridList.datagrid('getChecked');
+		updatePackageSum(rows[0]);
+		changeVipFee();
+	}
+	
+	//修改VIP年费
+	function changeVipFee(){
+		//天或者月
+		var periodTimeUnit = $('input:radio[name="borrow.periodTimeUnit"]:checked').val();
+		//周期
+		var period = parseFloat($("#zhouqi").val());
+		if (periodTimeUnit == 1) {
+			var year = Math.ceil(period / 12);
+			$("#vipFee").val(Math.round(120 * year));
+		} else {
+			//如果是天标，年费都是120
+			$("#vipFee").val(120);
+		}
+	}
+	
+	//更新套餐总额
+	function updatePackageSum(row){
+		if(row != undefined && row != null){
+			var fee = 0.0;
+		    var zhouqi = parseInt($("#zhouqi").val());
+		    $("table [name='fee']").each(function(){
+		 	   if($(this).attr("pid")==row.id){
+		 		 	//每月收取的并且为月标的
+		 		   if($(this).attr("deductType") == '0' && $("#periodTimeUnitMonth").attr("checked")=="checked"){
+		 			   fee += parseFloat($(this).html())*zhouqi;
+		 		   }else{
+		 			   //一次性的或天标情况
+		 			   fee += parseFloat($(this).html());
+		 		   }
+		 	   }
+		     });
+		    $("div [name='appendRowPackage']").each(function(){
+		 	   if($(this).attr("packageId")==row.id){
+		 		   $(this).html(format(fee.toFixed(2)));
+		 		   return false;
+		 	   }
+		    });
+		}
+	}
+	
+	//修改表套餐的实际金额
+	function update(obj,index){
+		if($(obj).attr('isEditable')=="false"){
+			$.messager.alert('警告','此套餐金额不可修改！'); 
+			return;
+		}
+		var borrowMoney = parseFloat($("#currentAccount").val());
+		if(borrowMoney <= 0 || isNaN(borrowMoney)){
+			$.messager.alert('警告','请您先输入借款金额！'); 
+			return;
+		}
+		 var fee = parseFloat($(obj).text()); 
+		 //还款方式
+		 var repaymentStyle = $(obj).attr("repaymentStyle");
+	     //是否抵押
+	     var pledgeType = $(obj).attr("pledgeType");
+	     var title = '';
+	     if($(obj).attr("algo1").indexOf('proportion') > 0){
+	    	 title = '请输入百分比：【比率大于10则按照金额来算，小于等于10则按比例来算】';
+	     }else{
+	    	 title = '请输入金额：';
+	     }
+		 $.messager.prompt('修改套餐', title, function(r){
+			 		if(r == undefined){
+			 			return false;
+			 		}
+			 		//输入的金额或比例
+			 		var f = parseFloat(r);
+			 		if(isNaN(f)){
+			 			$.messager.alert('警告','输入参数非法！'); 
+			 			return false;
+			 		}
+					var count = 0.00;
+					var margin = 0.00;
+					var upfee = 0;
+					//判断输入的方式（一种是金额，一种是比例）
+					if(title == '请输入金额：'){
+						 margin = f-fee;
+						 $(obj).html(f.toFixed(2));
+						 upfee = parseFloat(f.toFixed(2));
+						 $(obj).attr("feeMoney",f);
+						 $(obj).removeAttr("style");
+						 detailPackage.datagrid("getRows")[index].fee=f; //这段代码是获取当前页的所有行。
+					 }else{
+						//输入之后的比例之后的金额
+						 var money = 0;
+						 //判断输入的比例是否大于10
+						 if(f > 10){
+							 money = parseFloat(f);
+							//输入之前和之后的金额差
+							 margin = money-fee;
+							 f = (money/borrowMoney*100).toFixed(2);
+						 }else{
+							 money = (borrowMoney*f/100).toFixed(2);
+							 //输入之前和之后的金额差
+							 margin = borrowMoney*f/100-fee;
+						 }
+						 $(obj).html(money);
+						 upfee = parseFloat(money);
+						 $(obj).attr("feeMoney",f);
+						 detailPackage.datagrid("getRows")[index].fee=money;
+						 
+						 //更新管理费描述
+						 $("div [name='note']").each(function(){
+							 if($(this).attr("pid")==$(obj).attr("pid")){
+								 if($(this).attr("shouFeeName")==$(obj).attr("shouFeeName")){
+									 $(this).html("本金*"+f+"%");
+									 detailPackage.datagrid("getRows")[index].note="本金*"+f+"%";
+								 }
+							 }
+						 });
+					 }
+					//更新总额信息
+					var deductType = $(obj).attr("deductType");
+					var poor = 0;
+					var dayOfMonth = 0;
+					if($("#periodTimeUnit").attr("checked")){
+						//天标
+						dayOfMonth = 1;
+					}else{
+						dayOfMonth = parseFloat($("#zhouqi").val());
+					}
+					if(deductType == '0'){
+						//每月收取
+						poor = margin * dayOfMonth;
+					}else{
+						//一次性收取
+						poor = margin;
+					}
+					$("div [name='appendRowPackage']").each(function(){
+						if($(this).attr("packageId") == $(obj).attr("pid")){
+							count = parseFloat(delformat($(this).text()));
+							var totle = (count+poor).toFixed(2);
+							$(this).html(format(totle));
+							return false;
+						}
+					});
+					var capital = parseFloat($("#currentAccount").val());
+					var inrterest = parseFloat(computInterestByRepayStyle(capital));
+					$("table [name='fee']").each(function(){
+			   			var feeName = $(this).attr('feename');
+			   			if((feeName=='风险金' || feeName=='停车费')&& $(this).attr("pid")==$(obj).attr("pid")){
+			   				var baoXianOrTingChe = parseFloat($(this).text());
+			   				//推算比例
+							if($(obj).attr("algo1") != '' && $(obj).attr("algo1") != null){
+								var rate = ((upfee+baoXianOrTingChe+inrterest)/capital*100).toFixed(2);
+								$("#rate").val(rate);
+								return false;
+							}
+			   			}
+					});
+			});
+	 }
+	
+	/***
+	 * 计算实际收费金额
+	 */
+	function computPackageDetail(count,interest){
+		if(isNaN(count)){
+			count = 0;
+		}
+		//如果是“月还息到期还本”，测为true,否则为false
+		var repaymentStyle = $("#repaymentStyle").attr("checked");
+		//如果是“抵押”，测为true,否则为false
+		var pledgeTypeNo = $("#pledgeTypeNo").attr("checked");
+		//当前选择的套餐id
+		var rows = borrowPackageDataGridList.datagrid('getChecked');
+		//用于记录总和
+		var sum = 0.0;
+		if(rows.length > 0){
+			$("table [name='fee']").each(function(){
+				var result = 0;
+		    	if(rows[0].id == $(this).attr("pid")){
+		   			var algo1= new Array();
+		   			//获得套餐算法参数
+		   			algo1 = ($(this).attr("algo1")).split(",");
+		   			//获得套餐运算符
+		   			var fuhao = ($(this).attr("algo2")).split(",");
+		   			//比例
+		   			var proportion = parseFloat($(this).attr("feeMoney"));
+		   			//根据输入的金额动态修改标套餐金额
+		   			for(var i = 0; i < algo1.length-1; i++){
+		   				if(i==0){
+		   					result =computByParam(algo1[i],algo1[i+1],fuhao[i],repaymentStyle,pledgeTypeNo,count,interest,proportion);
+		   				}else{
+		   					result =computByParam(result,algo1[i+1],fuhao[i],repaymentStyle,pledgeTypeNo,count,interest,proportion);
+		   				}
+		   			}
+		   			//月还息到息还本风险金的计算方式  或者  质压停车费计算
+		   			var feeName = $(this).attr('feename');
+		   			if((feeName=='风险金' && repaymentStyle) || (feeName=='停车费' && !pledgeTypeNo && repaymentStyle)){
+			   			//本金<=10万，300元/月，超过10万部分每增加1万增加20元/月
+			   			var fee = 0;
+		   				//超出的需增加的部分
+		   				var beyond = (count - 100000)/10000*20;
+		   				if(beyond > 0){
+		   					fee = 300+beyond;
+		   				}else{
+		   					fee = 300;
+		   				}
+		   				$(this).text(fee.toFixed(2));
+		   				$.each(detailPackage.datagrid("getRows"), function(index, ele) {
+		   					if ((ele.name=='风险金' && repaymentStyle) || (ele.name=='停车费' && !pledgeTypeNo && repaymentStyle)) {
+		   						ele.fee=fee.toFixed(2);
+		   					}
+		   				});
+		   			}
+		   			if(algo1.length>1){
+		   				$(this).text(result.toFixed(2));
+		   				$.each(detailPackage.datagrid("getRows"), function(index, ele) {
+		   					if (ele.name == feeName) {
+			   					if (ele.algo1 != null && ele.algo1.length>1) {
+			   						ele.fee=result.toFixed(2);
+			   					}
+		   					}
+		   				});
+		   				if(result<=0){
+		   					$(this).css("color","red");
+		   				}else{
+		   					$(this).removeAttr("style");
+		   				}
+		   			}
+		   			sum += parseFloat($(this).text());
+		    	}
+		    });
+			$("div [name='appendRowPackage']").each(function(){
+					if(rows[0].id == $(this).attr("packageId")){
+						$(this).html(format(sum.toFixed(2)));
+						return false;
+					}
+			});
+		}
+	}
+	
+	/***
+	 * 根据传入的参数和运算符号计算套餐费用
+	 */
+	function computByParam(param1,param2,fuhao,repaymentStyle,pledgeTypeNo,count,interest,proportion){
+		var result = 0;
+		//月（天）利息
+		var apr = parseFloat(interest);
+		//年利率
+		var borrowApr = parseFloat($("#borrowapr").val())/100;
+		//发标周期
+		var qishu = parseInt($("#zhouqi").val());
+		//固定月利率
+		var rate = parseFloat($("#rate").val())/100;
+		var p1 = 0.0;
+		var p2 = 0.0;
+		
+		if(param1=='capital'){//本金
+			p1 = count;
+		}else if(param1=='interest'){//利息
+			if($("#periodTimeUnitMonth").attr("checked")){
+				p1 = apr*qishu;
+			}else{
+				p1 = apr;
+			}
+		}else if(param1 == 'rate'){//固定月利率
+			p1 = rate;
+		}else if(param1 == 'risk' || param1 == 'parkingFee'){//风险金或者是停车费
+			//风险金  本金<=10万，300元/月，超过10万部分每增加1万增加20元/月
+			var fee = 0;
+			//超出的需增加的部分
+			var beyond = (count - 100000)/10000*20;
+			if(beyond > 0){
+				fee = 300+beyond;
+			}else{
+				fee = 300;
+			}
+			p1 = fee;
+		}else{
+			p1 = parseFloat(param1);
+		}
+		if(param2=='interest'){//利息
+			/*if($("#periodTimeUnitMonth").attr("checked")){
+				p2 = apr*qishu;
+			}else{
+				p2 = apr;
+			}*/
+			p2 = apr;
+		}else if(param2 == 'rate'){//固定月利率
+			p2 = rate;
+		}else if(param2 == 'risk' || param2 == 'parkingFee'){//押金或者是管理费
+			//风险金  本金<=10万，300元/月，超过10万部分每增加1万增加20元/月
+			var fee = 0;
+			//超出的需增加的部分
+			var beyond = (count - 100000)/10000*20;
+			if(beyond > 0){
+				fee = 300+beyond;
+			}else{
+				fee = 300;
+			}
+			p2 = fee;
+		}else if(param2 == 'proportion'){//比例
+			p2 = proportion/100;
+		}
+		
+		if(fuhao=="+"){
+			result = p1 + p2;
+		}else if(fuhao=="-"){
+			result = p1 - p2;
+		}else if(fuhao=="*"){
+			result = p1 * p2;
+		}else if(fuhao=="/"){
+			result = p1 / p2;
+		}
+		return result;
+	}
+	
+	/***
+	 * 根据还款方式计算利率
+	 */
+	function computInterestByRepayStyle(count){
+		var interest = 0.0;
+		var borrowApr = parseFloat($("#borrowapr").val())/100;
+		var time = parseInt($("#zhouqi").val());
+		if($("#periodTimeUnit").attr("checked")){
+			//天标
+			interest = (count*borrowApr/12/30*time).toFixed(2);
+			if(isNaN(interest)){
+	    		$("#interest").html("利息：0元");
+	    	}else if(interest >= 10000 && interest < 100000000){
+	    		$("#interest").html("利息"+(interest/10000).toFixed(2)+"万");
+	    		$("#interest").css("color","#006000");
+	    	}else if(interest >= 100000000){
+	    		$("#interest").html("利息"+(interest/100000000).toFixed(2)+"亿");
+	    		$("#interest").css("color","red");
+	    	}else{
+	    		$("#interest").html("利息"+interest+"元");
+	    		$("#interest").css("color","2828FF");
+	    	}
+		}else{
+			//月标
+			interest =(count*borrowApr/12).toFixed(2);
+			if(isNaN(interest)){
+	    		$("#interest").html("月息：0元");
+	    	}else if(interest >= 10000 && interest < 100000000){
+	    		$("#interest").html("月息"+(interest/10000).toFixed(2)+"万");
+	    		$("#interest").css("color","#006000");
+	    	}else if(interest >= 100000000){
+	    		$("#interest").html("月息"+(interest/100000000).toFixed(2)+"亿");
+	    		$("#interest").css("color","red");
+	    	}else{
+	    		$("#interest").html("月息"+interest+"元");
+	    		$("#interest").css("color","2828FF");
+	    	}
+		}
+		return interest;
+	}
+	
+	//根据还款方式以及发标方式（月，天）验证发标周期
+	function checkborroePeriod(obj){
+		//还款方式为“月还息到期还本” 并且选择的是天标
+		if($("#repaymentStyle").attr("checked") && $("#periodTimeUnit").attr("checked")){
+			if(parseInt($(obj).val()) > 31){
+				$(obj).val(31);
+				$.messager.show({
+	    			title:'温馨提示',
+	    			msg:'【月还息到期还本】标的有效期最多为31天！',
+	    			timeout:5000,
+	    			showType:'slide'
+	 			});
+				return;
+			}
+		}else if(!$("#repaymentStyle").attr("checked") && $("#periodTimeUnit").attr("checked")){
+			//还款方式为“等额本息” 并且选择的是天标
+			if(parseInt($(obj).val()) > 31){
+				$(obj).val(31);
+				$.messager.show({
+	    			title:'温馨提示',
+	    			msg:'【等额本息】标的有效期最多为31天！',
+	    			timeout:5000,
+	    			showType:'slide'
+	 			});
+				return;
+			}
+		}
+	}
+	
+	 //还款方式单机事件
+	function checkrepaymentStyle(Style){
+		 //默认赋值为无质压
+		 var pledgeType = 0;
+		 if(!$("#pledgeTypeNo").attr("checked")){
+			//赋值为有质压
+			 pledgeType = 1;
+		 }
+		 //等额本息还款首期不得预扣
+		 if(Style==1){
+			 $("#isFirstPre").attr({"checked":"checked"});
+			 $("#borrowAnnualYield").val("13.2");
+			 $("#borrowapr").val("13.2");
+			 if (pledgeType == 0) {
+				 $("#dongjieApr").val(0.02);
+			 }
+			 $("#periodTimeUnit").attr("disabled","disabled");
+			 $("#periodTimeUnitMonth").attr("checked","checked");
+			 $("#zhouqi").val(6);
+		 }else{
+			 $("#borrowAnnualYield").val("11.2");
+			 $("#borrowapr").val("11.2");
+			 $("#isFirstPre2").attr("checked","checked");
+			 if (pledgeType == 0) {
+				 $("#dongjieApr").val(0.05);
+			 }
+			 $("#periodTimeUnit").removeAttr("disabled");
+			 $("#zhouqi").val(1);
+		 }
+		 
+		 borrowPackageDataGridList.datagrid("load",{repaymentStyle:Style,pledgeType:pledgeType});
+		//设置冻结金额
+		var count = parseFloat($("#currentAccount").val());
+		var apr = parseFloat($("#dongjieApr").val());
+		setFreeze(count,apr);
+		updateDongjie();
+	}
+	 
+	//是否质压单机事件
+	function checkpledgeType(pledgeType){
+		 //默认赋值为月还息到期还本
+		 var Style = 0;
+		 if(!$("#repaymentStyle").attr("checked")){
+			//赋值为等额本息还款
+			 Style = 1;
+		 }
+		 if(pledgeType == '1'){
+			 $("#dongjieApr").val(0);
+			 $("#dongjieApr").attr('disabled','disabled');
+			 $("#title").val($("#title").val().replace("抵押","质押"));
+		 }else{
+			 $("#title").val($("#title").val().replace("质押","抵押"));
+			//等额本息还款首期不得预扣
+			 if(Style==1){
+				 $("#dongjieApr").val(0.02);
+				 $("#borrowAnnualYield").val("13.2");
+				 $("#borrowapr").val("13.2");
+			 }else{
+				 $("#dongjieApr").val(0.05);
+				 $("#borrowAnnualYield").val("11.2");
+				 $("#borrowapr").val("11.2");
+			 }
+			 $("#dongjieApr").attr('disabled',false);
+			 //设置冻结金额
+			 var count = parseFloat($("#currentAccount").val());
+			 var apr = parseFloat($("#dongjieApr").val());
+			 setFreeze(count,apr);
+		 }
+		 $('#loanType_add').combobox('setValue', pledgeType);
+		 borrowPackageDataGridList.datagrid("load",{repaymentStyle:Style,pledgeType:pledgeType});
+	}
+	
+	//加载套餐费用（用于修改）
+	function loadPackageFee(result){
+		var j = 0;
+		var data = result[0];
+		var feeMenus = data.bidFeeMenus;
+		var packageDetail = data.pbiIds;
+		var sumFee = 0;
+		//风险金或停车费
+		var fee = 0;
+		//借款期限
+		var period = parseInt(data.borroePeriod);
+		$("div [name='fee']").each(function(){
+			if($(this).attr('pid')==data.packageId){
+				//一个月的套餐费用
+				var monthFee = 0;
+				//天标还是月标
+				if(data.periodTimeUnit == '1'){//月标
+					//一次性还是每月收取
+					if(result[j].deductType == '0'){//按月收取
+						monthFee = parseFloat(feeMenus[j].fee)/period;
+					}else{
+						monthFee = parseFloat(feeMenus[j].fee);
+					}
+				}else{
+					monthFee = parseFloat(feeMenus[j].fee);
+				}
+				$(this).text(monthFee.toFixed(2));
+				sumFee += parseFloat(feeMenus[j].fee);
+				var feeName = $(this).attr('feename');
+				if(feeName=='风险金' || feeName=='停车费'){
+					fee = monthFee
+				}
+				++j;
+			}
+		});
+		j = 0;
+		$("div [name='note']").each(function(){
+	 		if(data.packageId == $(this).attr('pid')){
+	 			if(feeMenus[j].feeStandard != null){
+	 				$(this).text(feeMenus[j].feeStandard);
+	 			}
+	 			++j;
+	 		}
+	 	});
+		//更新总额信息
+		$("div [name='appendRowPackage']").each(function(){
+			if($(this).attr("packageId") == data.packageId){
+				var totle = sumFee.toFixed(2);
+				$(this).html(format(totle));
+				return false;
+			}
+		});
+		
+		//更新固定利率
+		var capital = parseFloat($("#currentAccount").val());
+		var inrterest = parseFloat(computInterestByRepayStyle(capital));
+		$("table [name='fee']").each(function(){
+				var feeName = $(this).attr('feename');
+				if((feeName=='管理费')&& $(this).attr("pid")==data.packageId){
+					var managerFee = parseFloat($(this).text());
+					//推算比例
+					var rate = ((fee+managerFee+inrterest)/capital*100).toFixed(2);
+					$("#rate").val(rate);
+					return false;
+				}
+		});
+		//设置首投最高金额
+		setTenderAccount();
+	}
+	
+	//修改标的，初始化修改参数
+	function initBorrowInfo(){
+		var repayStyle ;
+		if($("#repaymentStyle").attr("checked")){
+			repayStyle = 0;
+		}else{
+			repayStyle = 1;
+		}
+		//checkrepaymentStyle(repayStyle);
+		//初始化冻结金额
+		updateDongJie();
+	}
+	
+	/**
+	 * 设置冻结金额
+	 */
+	function setFreeze(count,apr){
+		var comput = 0;
+		if(parseFloat(apr) >= 1){
+			comput = apr;
+		}else{
+			comput = (count*apr).toFixed(2);
+		}
+		if(isNaN(comput)){
+			$("#dongjie").html("0元");
+			$("#deposit").val("0");
+			$("#dongjie").css("color","2828FF");
+		}else{
+			if(comput >= 10000 && comput < 100000000){
+				$("#dongjie").html((comput/10000).toFixed(2)+"万");
+				$("#dongjie").css("color","#006000");
+			}else if (comput >= 100000000){
+				$("#dongjie").html((comput/100000000).toFixed(2)+"亿");
+				$("#dongjie").css("color","red");
+			}else{
+				$("#dongjie").html(comput+"元");
+				$("#dongjie").css("color","2828FF");
+			}
+			$("#deposit").val(comput);
+		}
+	}
+	
+	//用于记录套餐费用数量
+	var manageCount = '';
+	//标记是否 为预览并且套餐金额未做修改的情况之下【只有预览才异步后台加载】
+	var flag = 0;
+	 //存储模式化对话框
+	var borrow_detail_preview_Dialog;
+	//dilog代表预览页面
+	//var dilog;
+	//预览
+	function preview(){
+		var period = parseInt($("#zhouqi").val());
+		if($("#repaymentStyleDengE").attr("checked")){
+			if(!(period>5 && period <37)){
+				$.messager.show({
+		 			title:'温馨提示',
+		 			msg:'等额本息还款发标周期在6-36个月之间，请您重新输入！',
+		 			timeout:5000,
+		 			showType:'slide'
+		 			});
+		  		return;
+			}
+		}else{
+			if(!(period>0 && period <7)){
+				$.messager.show({
+		 			title:'温馨提示',
+		 			msg:'月还息到息还本发标周期在1-6个月之间，请您重新输入！',
+		 			timeout:5000,
+		 			showType:'slide'
+		 			});
+		  		return;
+			}
+		}
+		 var rows = borrowPackageDataGridList.datagrid('getChecked');
+		 	if(rows.length <= 0){
+		  		$.messager.show({
+		 			title:'温馨提示',
+		 			msg:'请先选择一个套餐！',
+		 			timeout:5000,
+		 			showType:'slide'
+		 			});
+		  		return;
+		  	}
+		 if(parseFloat($("#award").val()) >= 1){
+		 		$.messager.show({
+		 			title:'温馨提示',
+		 			msg:'奖励比例不得大于1！',
+		 			timeout:5000,
+		 			showType:'slide'
+		 		});
+		 		return;
+		 }
+		var pid = rows[0].id;
+		$("table [name='fee']").each(function(){
+			if($(this).attr("pid")==pid){
+				var fee = parseFloat($(this).text());
+				if(isNaN(fee) || fee < 0){ 
+					$(this).text('0.00');
+				}
+			}
+		});
+		
+		 var myform = $.serializeObject($("#total_form"));
+		 var w = parseInt(document.body.clientWidth);
+		 var h = parseInt(window.screen.height) - 200;
+		 if($("#isNewBorrowPreview").val() != 'true'){
+			 borrow_detail_preview_Dialog = parent.sy.modalDialog({
+					title : '预览',
+					width : w,
+					height : h,
+					cache : false,
+					url : "${rc.contextPath}/charge/showBorrowPreviewDialog?borrowAmount="+myform['borrow.borrowAmount']+"&repaymentStyle="+myform['borrow.repaymentStyle']+"&borrowerAnnualYield="+myform['borrow.borrowerAnnualYield']+"&borroePeriod="+myform['borrow.borroePeriod']+"&periodTimeUnit="+myform['borrow.periodTimeUnit']+"&barCode="+myform['borrow.barCode'],
+					modal : true,
+					buttons:[{
+						text:'打印',
+						iconCls:'icon-print',
+						handler:function(){
+							var os = getOs();
+					    	if(os != 'Firefox'){
+					    		parent.$.messager.alert('警告','<p style="font-size:16px;font-family:楷体;">请您尽量使用火狐浏览器操作打印！火狐浏览器下载地址:<p style="color:red;font-size:16px;">http://www.firefox.com.cn/download/</p>');
+					    		//return false;
+					    	}
+							var prnhtml = dilog.$("#print_borrow_detail").html();
+							var style = "<style>.info-table3 table tr th #repaymentStyleH3{font-size: 8px;} .info-table3 table tr th .print_class{font-size: 16px;} .info-table3 table th,.info-table3 table td{ color:#000;font-size: 14px;} .tipsUl{font-size: 12px;} .tipsUl li.right{ margin-left: 450px;} .info-table3 table tr td .tdStyle{width:50px;} .info-table3 table tr .repaymentTime{width:400px;} .info-table3 table td .tdStyle{font-weight:normal;}</style>"
+							window.document.body.innerHTML=style+prnhtml;
+							if(os == 'Safari'){
+								document.getElementsByTagName('body')[0].style.height=$("#borrow_preview_id").height()+1000+"px";
+							}else{
+								document.getElementsByTagName('body')[0].style.height=$("#borrow_preview_id").height()+335+"px";
+							}
+							//document.getElementsByTagName('body')[0].style.width = 1000+"px";
+							window.print();
+							//borrow_detail_preview_Dialog.dialog('destroy');
+							newBorrowPreviewDialogWindow.dialog('destroy');
+							//CreateOnePage();	
+						}
+					},{
+						text:'取消',
+						iconCls:'icon-cancel',
+						handler:function(){
+							borrow_detail_preview_Dialog.dialog('destroy');
+						}
+					}]
+			});
+		 }else{
+			 borrow_detail_preview_Dialog = parent.sy.modalDialog({
+					title : '预览',
+					width : w,
+					height : h,
+					cache : false,
+					url : "${rc.contextPath}/charge/showBorrowPreviewDialog?borrowAmount="+myform['borrow.borrowAmount']+"&repaymentStyle="+myform['borrow.repaymentStyle']+"&borrowerAnnualYield="+myform['borrow.borrowerAnnualYield']+"&borroePeriod="+myform['borrow.borroePeriod']+"&periodTimeUnit="+myform['borrow.periodTimeUnit']+"&barCode="+myform['borrow.barCode'],
+					modal : true,
+					buttons:[{
+						text:'打印',
+						iconCls:'icon-print',
+						handler:function(){
+							var os = getOs();
+					    	if(os != 'Firefox'){
+					    		parent.$.messager.alert('警告','<p style="font-size:16px;font-family:楷体;">请您尽量使用火狐浏览器操作打印！火狐浏览器下载地址:<p style="color:red;font-size:16px;">http://www.firefox.com.cn/download/</p>');
+					    		//return false;
+					    	}
+							var prnhtml = dilog.$("#print_borrow_detail").html();
+							var style = "<style>.info-table3 table tr th #repaymentStyleH3{font-size: 8px;} .info-table3 table tr th .print_class{font-size: 16px;} .info-table3 table th,.info-table3 table td{ color:#000;font-size: 14px;} .tipsUl{font-size: 12px;} .tipsUl li.right{ margin-left: 450px;} .info-table3 table tr td .tdStyle{width:50px;} .info-table3 table tr .repaymentTime{width:400px;} .info-table3 table td .tdStyle{font-weight:normal;}</style>"
+							window.document.body.innerHTML=style+prnhtml;
+							if(os == 'Safari'){
+								document.getElementsByTagName('body')[0].style.height=$("#borrow_preview_id").height()+1000+"px";
+							}else{
+								document.getElementsByTagName('body')[0].style.height=$("#borrow_preview_id").height()+335+"px";
+							}
+							//document.getElementsByTagName('body')[0].style.width = 1000+"px";
+							window.print();
+							//borrow_detail_preview_Dialog.dialog('destroy');
+							newBorrowPreviewDialogWindow.dialog('destroy');
+							//CreateOnePage();	
+						}
+					},{
+						text:'取消',
+						iconCls:'icon-cancel',
+						handler:function(){
+							borrow_detail_preview_Dialog.dialog('destroy');
+						}
+					}]
+			});
+		 }
+		//这还需要设置套餐详情实际总金额
+		//调用方法完成
+		flag = 1;
+		dilog = borrow_detail_preview_Dialog.find('iframe').get(0).contentWindow;
+		var count = 1;
+	    var interval = window.setInterval(function(){
+	    	var str = dilog.$("#borrowAnnualYieldDialog").text().trim();
+	    	var managerFee = dilog.$("#feeDialog").html().trim();
+	    	if(managerFee == undefined || managerFee == '' || managerFee < 0){
+	    		computManageFee();
+	    	}
+	    	if(str == undefined || str == ''){
+	        	loadpreviewParame();
+	    	}
+	    	if(count > 10){
+	    		window.clearInterval(interval);
+	    	}
+	    	count = count+1;
+	    },1000);
+		//setTimeout(computManageFee,1200);
+		//setTimeout(loadpreviewParame,1300);
+	}
+	var newBorrowPreviewDialogWindow;
+	function newBorrowPreviewDialogObj(obj){
+		newBorrowPreviewDialogWindow = obj;
+	}
+	//这两个属性为了加载预览【贷还款明细清单的管理费信息】
+	var tdFeeName= '';
+	var tdFeeMoney = '';
+	//存储按月收取的费用信息
+	var tdFeeMoneyMonth = '';
+	//存储按月收取的费用之和
+	var manageFeeMoneyMonthSum = 0;
+	 //加载预览数据
+	function loadpreviewParame(){
+		//保险扣款
+		var premiumDeduct = $("#premiumDeduct").val() * 1;
+		//年检扣款
+		var annual = $("#annual").val() * 1;
+		//违章扣款
+		var violationDeduct = $("#violationDeduct").val() * 1;
+		//加急费
+		var urgentFee = $("#urgentFee").val() * 1;
+		
+		dilog.$("#premiumDeductDialog").html(premiumDeduct);
+		dilog.$("#annualDialog").html(annual);
+		dilog.$("#violationDeductDialog").html(violationDeduct);
+		dilog.$("#urgentFeeDialog").html(urgentFee);
+		
+		var myform = $.serializeObject($("#total_form"));
+		//借款金额
+		var borrowMoney = parseFloat(myform['borrow.borrowAmount']);
+		//奖励
+		var award = parseFloat((borrowMoney*parseFloat(myform['borrow.awardAmonut'])).toFixed(2));
+		//vip费用
+	    var vipFee = 0;
+		if($("#isNewBorrowPreview").val() != 'true'){
+			 dilog.$("#issueUnameDialog").html(myform['borrow.issueUname']);
+			 dilog.$("#cusUserNameDialog").html($("#custName").val());
+			 dilog.$("#dialogBorrowName").html($("#title").val());
+			 if($("#vipFeeShow").attr("checked") == "checked"){
+				 vipFee = parseFloat($("#vipFee").val() * 1);
+			 }
+			 dilog.$("#awardAmonutDialog").after('<td class="name">会员扣费：</td><td id="dialogVipFee">'+vipFee+'</td>');
+		}else{
+			dilog.$("#dialog_award").html("履约");
+			if($("#vipFeeShow").attr("checked") == "checked"){
+				vipFee = parseFloat($("#vipFee").val() * 1);
+			}
+			dilog.$("#awardAmonutDialog").after('<td class="name">会员扣费：</td><td id="dialogVipFee">'+vipFee+'</td>');
+		}
+		if($("#pledgeTypeNo").attr("checked") == "checked"){
+			dilog.$("#productTypeIdDialog").html("抵押[普通]");
+		}else{
+			dilog.$("#productTypeIdDialog").html("抵押[质押]");
+		}
+		 
+		 dilog.$("#borrowAmountDialog").html(format(myform['borrow.borrowAmount']));
+		 var period = '';
+		 if(myform['borrow.periodTimeUnit'] == 0){
+			 period ='天';
+		 }else{
+			 period ='个月';
+		 }
+		dilog.$("#borroePeriodDialog").html(myform['borrow.borroePeriod']+period);
+		if(myform['borrow.borrowerAnnualYield'] != myform['borrow.borrowAnnualYield']){
+			dilog.$("#borrowAnnualYieldDialog").html("投:"+myform['borrow.borrowAnnualYield']+'%,借:'+myform['borrow.borrowerAnnualYield']+"%");
+		}else{
+			dilog.$("#borrowAnnualYieldDialog").html(myform['borrow.borrowerAnnualYield']+'%');
+		}
+		dilog.$("#currentDateDialog").html(myform.currentDate);
+		//物质押
+		if($("#pledgeTypeNo").attr("checked")){
+			dilog.$("#depositDialog").html($("#deposit").val());
+		}else{
+			//质押
+			dilog.$("#depositDialog").html(0);
+		}
+		dilog.$("#awardAmonutDialog").html(award);
+		dilog.$("#tdTitle").append(tdFeeName);
+		var repaymentMoney = parseFloat(dilog.$("#repaymentMoney").html());
+		var feeManage = parseFloat($("#yicixingmanageFee").val()).toFixed(2);
+		dilog.$("#tdContent").before("<tr id='appendFee'><td style='width: 550px;'>立即收取</td><td style='width: 500px;'>"+myform.currentDate+"</td><td>"+format(feeManage)+"</td><td>0.0</td><td>0.0</td></tr>");
+		dilog.$("#appendFee").append(tdFeeMoney);
+		var str =""
+		var deductTypeStr = manageCount.substring(0,manageCount.lastIndexOf(','));
+		var deductTypes = deductTypeStr.split(',');
+		/*for(var i = 0; i<deductTypes.length;i++){
+				str += "<td>0</td>";
+		}*/
+		for(var i = 0; i < tdCount;i++){
+			str += "<td style='font-weight: normal;'>0</td>";
+		}
+		var i = 0;
+		dilog.$("table [name='tdContent']").each(function(){
+			if($(this).attr("period") == '-1'){
+				$(this).append(str);
+				return false;
+			}
+			$(this).append(tdFeeMoneyMonth);
+			i = i+1;
+		});
+		var colspan = parseInt(dilog.$("#repayTile").attr("colspan"))+deductTypes.length;
+		dilog.$("#repayTile").attr({"colspan":colspan});
+		//dilog.$("#repaymentStyleTile").attr({"colspan":colspan});
+		//更新还款总额
+		dilog.$("div [name='repaymentMoneyDialog']").each(function(){
+			var sum = 0;
+			if($(this).attr("period") == '-1'){
+				sum = parseFloat($(this).text()).toFixed(2);
+			}else{
+				sum = (parseFloat($(this).text())+manageFeeMoneyMonthSum).toFixed(2);
+			}
+			$(this).html(sum);
+		});
+		//首期冻结
+		var first = parseFloat((parseFloat(manageFeeMoneyMonthSum)+parseFloat(dilog.$("#firstInterest").html())).toFixed(2));
+		//$("#repaymentMoney").html(repaymentMoney);
+		if($("#repaymentStyle").attr("checked")){
+			dilog.$("#repaymentStyleH3").html("[方式:月还息到期还本]");
+			//dilog.$("#borrowerAnnualYieldDialog").html(first);
+			if($("#periodTimeUnit").attr("checked")){
+				dilog.$("#qianqiMoney").html(format((parseFloat(dilog.$("#firstInterest").html())).toFixed(2)));
+			}else{
+				dilog.$("#qianqiMoney").html(format((parseFloat(dilog.$("#firstInterest").html())*parseInt($("#zhouqi").val())).toFixed(2)));
+			}
+			dilog.$("#daoqi").html(format(borrowMoney));
+		}else{
+			dilog.$("#repaymentStyleH3").html("[方式:等额本息]");
+			//dilog.$("#borrowerAnnualYieldDialog").html("0");
+			if($("#periodTimeUnit").attr("checked")){
+				dilog.$("#qianqiMoney").html(format((parseFloat(dilog.$("#firstInterest").html())+borrowMoney).toFixed(2)));
+			}else{
+				var account = parseFloat(delformat(dilog.$("#firstAccount").html()))*parseFloat($("#zhouqi").val());
+				var interest = parseFloat(dilog.$("#firstInterest").html())*parseFloat($("#zhouqi").val());
+				dilog.$("#qianqiMoney").html(format((interest+account).toFixed(2)));
+			}
+			dilog.$("#daoqiText").html('');
+		}
+		//是否预扣首期
+		if($("#isFirstPre").attr("checked")){
+			//不预扣
+			dilog.$("#borrowerAnnualYieldDialog").html("0");
+			first = 0;
+		}else{
+			dilog.$("#borrowerAnnualYieldDialog").html(first);
+		}
+		//保证金
+		var marginAccount = parseFloat(dilog.$("#depositDialog").html());
+		var cach = 0;
+		//可提现金额
+		//if($("#repaymentStyle").attr("checked")){
+			//月还息到息还本
+			cach = parseFloat(borrowMoney-(marginAccount+first+parseFloat($("#manageerFee").val()) + vipFee + premiumDeduct + annual + violationDeduct));
+		//}else{
+			//等额本息
+			//cach = parseFloat(borrowMoney-(marginAccount+first+parseFloat($("#manageerFee").val()) + vipFee));
+		//}
+		dilog.$("#cachMoney").html(format(cach.toFixed(2)));
+		//alert("可提现金额"+cach);
+		//提现上限
+		var cachUpper = parseFloat($("#cachUpper").val());
+		//alert("提现上限"+cachUpper);
+		//提现手续费(向上取整)
+		var cachFee = (Math.ceil(cach/cachUpper)-1)*2+22;
+		//alert("提现手续费"+cachFee);
+		dilog.$("#cachFeeDialog").html(cachFee);
+		//实际提现金额
+		dilog.$("#actualCachDialog").html(format((cach-cachFee).toFixed(2)));
+		//alert("实际提现金额"+(cach-cachFee));
+	 	//如果发标金额小于实际套餐费用，测给出相应的提示
+	 	if(cach < 0){
+	 		var liji = 0;
+	 		if($("#repaymentStyle").attr("checked")){
+	 			liji = (feeManage + marginAccount + first+vipFee).toFixed(2);
+	 		}else{
+	 			liji = (feeManage + marginAccount+vipFee).toFixed(2);
+	 		}
+	 		var dayu = (liji - borrowMoney).toFixed(2); 
+	 		dilog.$("#firstTable").before("<center  style='color: red;'><h1>金额检查发现错误！请检查收费明细或者发标金额<br/>复审后立即收费的收费总额:"+liji+"！, 收费总额大于发标借款金额:"+dayu+"元！</h1></center>");
+	 	}
+	 	dilog.$("table [name='repaymentMoneyDialog']").each(function(){
+	 		$(this).html(format($(this).html()));
+	 	});
+	 	dilog.$("table [name='repayAccount']").each(function(){
+	 		$(this).html(format($(this).html()));
+	 	});
+	 	dilog.$("table [name='repayInterest']").each(function(){
+	 		$(this).html(format(parseFloat($(this).html()).toFixed(2)));
+	 	});
+	}
+	 
+	//一次性收取套餐费用和
+	 var yicixingmanageFee = 0;
+	 var tdCount = 0;
+	//用于生成预览
+	var content = '';
+	 //用来计算套餐实际金额
+	function computManageFee(){
+		//alert("方法被调用");
+		//制空套餐费用
+		manageFee = 0.0;
+		yicixingmanageFee = 0;
+		//制空加载预览【贷还款明细清单的管理费信息】
+		tdFeeName= '';
+		tdFeeMoney = '';
+		tdCount = 0;
+		tdFeeMoneyMonth = '';
+		manageFeeMoneyMonthSum = 0;
+		$("#manageerFee").val(0);
+		 //预览套餐信息
+		var rows = borrowPackageDataGridList.datagrid('getChecked');
+		var pid = rows[0].id;
+		//用于生成预览
+	 	content = '';
+	 	//用于生成向后台提交实际修改后的套餐金额
+	 	var subcontent = '';
+	 	//制空用于记录套餐费用数量
+	 	manageCount = '';
+	 	if($("div [name='fee']").length > 0){
+	 		//用于记录套餐数量的列，如果达到2列那么就从新另起一行
+	 		var i = 0;
+	 		var num = 0;
+	 		//当套餐详情大约两个的时候，用于记录剩下的套餐
+	 		var jilu = '';
+	 		//标识在套餐详情大于两个的时候是否已经追加到表格后，默认为已追加
+	 		var isflag = true;
+	 		//当用户点击套餐详情时
+		 	$("div [name='fee']").each(function(){
+		 		if($(this).attr("pid")==pid){
+		 			if(parseFloat($(this).text()) != undefined && !isNaN(parseFloat($(this).text()))){
+			 			subcontent = subcontent + '<input type="hidden"  name="packageDetailName" value = "'+$(this).attr("feename")+'"/><input type="hidden"  name="packageDetailId" value = "'+$(this).attr("thisId")+'"/><input type="hidden"  name="packageDetailMoney" value = "'+parseFloat($(this).text())+'"/><input type="hidden"  name="deductType" value = "'+$(this).attr("deductType")+'"/><input type="hidden"  name="deductTime" value = "'+$(this).attr("deductTime")+'"/>';
+			 			var fm = parseFloat((parseFloat($(this).text())*parseFloat($("#zhouqi").val())).toFixed(2));
+			 			//套餐详情大于两个的时候
+			 			if(i>1 && flag==1){
+			 				//按月收取 复审即扣 并且为月标
+			 				if($(this).attr("deductTime")=='复审即扣' && $("#periodTimeUnitMonth").attr("checked") && $(this).attr("deductType") == "0"){
+			 					jilu = jilu +"<td class='name'>"+$(this).attr("feename")+"</td><td>"+(parseFloat($(this).text())*parseInt($("#zhouqi").val())).toFixed(2)+"</td>";
+			 				}else if($(this).attr("deductTime")=='每期扣费' && $(this).attr("deductType") == "0" && $("#periodTimeUnitMonth").attr("checked")){
+			 					//按月收取 每期扣费 并且为月标
+			 					jilu = jilu +"<td class='name'>"+$(this).attr("feename")+"</td><td>"+(parseFloat($(this).text())*parseInt($("#zhouqi").val())).toFixed(2)+"</td>";
+			 				}else{
+			 					jilu = jilu +"<td class='name'>"+$(this).attr("feename")+"</td><td>"+$(this).text()+"</td>";
+			 				}
+			 				//是否为新标预览
+			 				if($("#isNewBorrowPreview").val() == 'true' && !isflag){
+		 						jilu = jilu.replace("管理费","账户管理费");
+		 						jilu = jilu.replace("GPS使用费","GPS使用费(代收)");
+		 						jilu = jilu.replace("风险金","风险金(代收)");
+		 						jilu = jilu.replace("GPS押金","GPS押金(代收)");
+		 						jilu = jilu.replace("停车费","停车费(代收)");
+		 			 		}
+			 				num = num+1;
+			 				if(num%2==0){//这里是追加
+			 					isflag = true;
+			 					dilog.$("#beforefeeFlag").before("<tr>"+jilu+"</tr>");
+			 					jilu = '';
+			 				}else{//这里标识未追加
+			 					isflag = false;
+			 				}
+			 			}else{
+			 				//按月收取 复审即扣 并且为月标
+			 				if($(this).attr("deductTime")=='复审即扣' && $("#periodTimeUnitMonth").attr("checked") && $(this).attr("deductType") == "0"){
+			 					content = content +"<td class='name' name='previewPrint'>"+$(this).attr("feename")+"</td><td>"+(parseFloat($(this).text())*parseInt($("#zhouqi").val())).toFixed(2)+"</td>";
+			 				}else if($(this).attr("deductTime")=='每期扣费' && $(this).attr("deductType") == "0" && $("#periodTimeUnitMonth").attr("checked")){
+			 					//按月收取 每期扣费 并且为月标
+			 					content = content +"<td class='name' name='previewPrint'>"+$(this).attr("feename")+"</td><td>"+(parseFloat($(this).text())*parseInt($("#zhouqi").val())).toFixed(2)+"</td>";
+			 				}else{
+			 					content = content +"<td class='name' name='previewPrint'>"+$(this).attr("feename")+"</td><td>"+$(this).text()+"</td>";
+			 				}
+			 			}
+			 			tdFeeName = tdFeeName + "<td style='font-weight: normal;' class='tdStyle name'>"+$(this).attr("feename")+"</td>";
+			 			tdCount = tdCount + 1;
+			 			//var tF = tdFeeMoney + "<td>"+$(this).attr("feeMoney")+"</td>";
+			 			var deductType = $(this).attr("deductType");
+			 			manageCount = manageCount+deductType+",";
+			 			//一次性收取的手续费
+			 			if($(this).attr("deductType")==1){
+		    				manageFee = manageFee + parseFloat($(this).text());
+		    				yicixingmanageFee = yicixingmanageFee + parseFloat($(this).text());
+		    				tdFeeMoney = tdFeeMoney + "<td style='font-weight: normal;' class='tdStyle'>"+$(this).text()+"</td>";
+		    				tdFeeMoneyMonth = tdFeeMoneyMonth + "<td style='font-weight: normal;' class='tdStyle name'>0</td>";
+			 			}else{//按月收取 复审即扣 并且为月标
+			 				if($(this).attr("deductTime")=='复审即扣' && $("#periodTimeUnitMonth").attr("checked")){
+			 					tdFeeMoney = tdFeeMoney + "<td style='font-weight: normal;' class='tdStyle'>"+fm+"</td>";
+			 					yicixingmanageFee = yicixingmanageFee + fm;
+			 					manageFee = manageFee + fm;
+			 					tdFeeMoneyMonth = tdFeeMoneyMonth + "<td style='font-weight: normal;' class='tdStyle name'>0</td>";
+			 				}else if($(this).attr("deductTime")=='复审即扣' && !$("#periodTimeUnitMonth").attr("checked")){
+			 					//按月收取 复审即扣 并且为天标
+			 					tdFeeMoney = tdFeeMoney + "<td style='font-weight: normal;' class='tdStyle'>"+$(this).text()+"</td>";
+			 					yicixingmanageFee = yicixingmanageFee + parseFloat($(this).text());
+			 					manageFee = manageFee + parseFloat($(this).text());
+			 					tdFeeMoneyMonth = tdFeeMoneyMonth + "<td style='font-weight: normal;' class='tdStyle name'>0</td>";
+			 				}else{//按月收取 每期扣费 
+				 				tdFeeMoney = tdFeeMoney + "<td style='font-weight: normal;' class='tdStyle'>0</td>";
+				 				tdFeeMoneyMonth = tdFeeMoneyMonth + "<td style='font-weight: normal;' class='tdStyle'>"+$(this).text()+"</td>";
+				 				manageFeeMoneyMonthSum = manageFeeMoneyMonthSum + parseFloat($(this).text());
+			 				}
+			 			}
+			 			i = i+1;
+		 			}
+		 		}
+		 	});
+		 	if(flag == 1){
+		 		//是否为新标预览
+		 		if($("#isNewBorrowPreview").val() == 'true'){
+			 		content = content.replace("管理费","账户管理费");
+			 		content = content.replace("GPS使用费","GPS使用费(代收)");
+			 		content = content.replace("风险金","风险金(代收)");
+			 		content = content.replace("GPS押金","GPS押金(代收)");
+			 		content = content.replace("服务费","服务费(代收)");
+			 		content = content.replace("停车费","停车费(代收)");
+		 		}
+		 		dilog.$("#feeDialog").html(content);
+		 		if(!isflag){
+		 			//是否为新标预览
+	 				if($("#isNewBorrowPreview").val() == 'true'){
+						jilu = jilu.replace("管理费","账户管理费");
+						jilu = jilu.replace("GPS使用费","GPS使用费(代收)");
+						jilu = jilu.replace("风险金","风险金(代收)");
+						jilu = jilu.replace("GPS押金","GPS押金(代收)");
+						jilu = jilu.replace("服务费","服务费(代收)");
+						jilu = jilu.replace("停车费","停车费(代收)");
+				 	}
+		 			dilog.$("#beforefeeFlag").before("<tr>"+jilu+"<td class='name'></td><td></td></tr>");
+		 		}
+		 	}
+		 	$("#borrowpackageDetails").html(subcontent);
+		 	$("#manageerFee").val(manageFee);
+		 	$("#yicixingmanageFee").val(yicixingmanageFee);
+	 	}
+	 	//设置套餐id
+		$("#packageId").val(rows[0].id);
+	}
+	
+	 
+	//查看影像功能
+	function ckyx(){
+		$.openImage('${BBI.barCode}');
+	}
+	
+	function clear(){
+		$(this).parents('tr').find('input[type="text"]').val('');
+	}
+	
+	$(document).on('click','.btn_clear',function(){
+		$(this).parents('tr').find('input[type="text"]').val('');
+	})
+	
+	function carLimitChange(){
+		var currentValue = $('#carLimit_add').val();
+		if(currentValue > newCarLimit){
+			$.messager.alert('提示','车辆额度超出范围');
+			return;
+		}
+	}
+
+/* 	//保存担保人信息
+	function saveDbrxx() {
+		console.info('saveDbrxx()');
+		var dbrUrl = "${rc.contextPath}/bussave/saveBondsman";
+		var dbrObj = $.serializeObject($('#fm_dbr'));
+		$.post(dbrUrl, dbrObj, function(data) {
+			if (data.success) {
+				$.messager.alert('提示', data.message, 'info');
+				$("#dlg_dbr").dialog("close");
+				return;
+			} else {
+				$.messager.alert('提示', data.message, 'error');
+				return;
+			}
+		}, 'json');
+	} */
+	
+	
+	//电核岗挂起或取消挂起
+	function dhgqOrqx(state){
+				$.ajax({
+					type : "post",
+					url : '${rc.contextPath}/bussave/hangUpFlow',
+					data : {
+						barCode : '${BBI.barCode}',
+						state : state
+					 },
+					async : false,
+					dataType : "json",
+					success : function(data) {
+						if (data.success) {
+							var nodeId = "A06";
+							if(state == 1){
+								nodeId = "A061";
+							}
+							location.href="${rc.contextPath}/busshow/toList?nodeId="+nodeId;
+						} else {
+							$.messager.alert('错误', data.message, 'error');
+						}
+					}
+				});
+	}
+	
+	
+	/**
+	   * 为table指定行添加一行
+	   *
+	   * tab 表id
+	   * row 行数，如：0->第一行 1->第二行 -2->倒数第二行 -1->最后一行
+	   * trHtml 添加行的html代码
+	   *
+	   */
+	  function addTr(tab, row, trHtml){
+	     //获取table最后一行 $("#tab tr:last")
+	     //获取table第一行 $("#tab tr").eq(0)
+	     //获取table倒数第二行 $("#tab tr").eq(-2)
+	     var $tr=$("#"+tab+" tr").eq(row);
+	     if($tr.size()==0){
+	        alert("指定的table id或行数不存在！");
+	        return;
+	     }
+	     $tr.after(trHtml);
+	  }
+	   
+	  function addTrByDynamic(tab, row, num){
+	    var trHtml="";
+	    for(var i=0;i<num;i++){
+	    	trHtml += "<tr align='center'><td width='20%'>0571</td><td width='25%'><input id='' name='ckb'/></td><td width='25%'><input id='' name='ckb'/></td><td width='30%'>9000</td></tr>";
+	    }
+	    addTr(tab, row, trHtml);
+	  }
+	  
+	  function monthDiff(d1, d2) {
+		  var months;
+		  months = (d2.getFullYear() - d1.getFullYear()) * 12;
+		  months -= d1.getMonth() + 1;
+		  months += d2.getMonth();
+		  return months <= 3 ? 1 : 0;
+	}
+	  
+	function checkoutData(dksx){
+		//计算车辆额度之前判断婚姻状况非空
+		var marriage = $('#marriage_sqb').combobox('getValue');//婚姻状况
+		if (marriage == '') { 
+			$.messager.alert('提示','请先输入婚姻状况');
+			return false;
+		}
+		
+		//计算车辆额度之前判断贷款手续非空
+		if(dksx == ''){
+			$.messager.alert('提示','请先输入贷款手续');
+			return false;
+		} 
+		
+        var relationCount = 0;
+        $('table#addtr_jtqk input[name$="relationType"]').each(function(index){
+            if($(this).val() == '1'){
+                relationCount++;
+            }
+        });
+
+        //此处判断，如果婚姻状况需跟联系人关系保持对应
+        if(relationCount > marriage){
+            $.messager.alert('提示','婚姻状况与配偶关系填写有矛盾');
+            return false;
+        }
+		
+		return true;
+	}
+	  
+	//多个抵押物分开单独计算车辆额度
+	function calculate(carId,cledId,evaluate){
+		
+		
+		var sfaj;//是否按揭isInstallment
+		var sfgsc;//是否公司车isCompanycar
+		var sfcfc;//是否查封车
+		var cjh;//车架号
+		var cped;//车牌额度
+		
+		var zhspsj;//最后上牌时间： 三个月以内1、超过三个月0 【距离当前系统时间三个月以内】
+		
+		var ywdbr;//有无担保人 0-无，1-有
+		
+		var dklx = $('#loanType_add').combobox('getValue');//贷款类型
+		var dksx = $('#loanFormal'+cledId).combobox('getValue');//贷款手续
+		
+		var nl;//年龄
+		var hyzk;//婚姻状况
+		//var ywjz = '$!{BRW.drivingLicence}';//有无驾照
+		var ywjz = $('#regularCustomer_jkrxx').combobox('getValue');//有无驾照
+		
+		var discount = 7;//默认折扣：7折
+		
+		//计算车辆额度之前校验
+        if(!checkoutData(dksx)){
+           return false;
+        }
+		
+		$.ajax({
+			type : "post",
+			url : '${rc.contextPath}/busshow/checkBondMan',
+			data : {
+				custId : '$!{BBI.custId}'
+			},
+			async : false,
+			dataType : "json",
+			success : function(data) {
+				if (data.success){  
+					ywdbr = data.dataModel;
+				}else{
+					$.messager.alert('提示',data.message,'error');
+				} 
+			}
+		})
+		var rows = $("#pawn_table").datagrid("getRows");
+		for(var i=0,l=rows.length;i<l;i++){
+		   var row = rows[i];
+		   if(row.id == carId){
+			   sfgsc = row.isCompanycar;
+			   sfaj = row.isInstallment;
+			   zhspsj = row.lastRegDate;
+			   sfcfc = row.sealupState;
+			   cjh = row.vin;
+			   cped = row.platenoLimit;
+		   }
+		}
+		
+		//当前系统时间
+		var today = new Date();
+		var zhDate = new Date(zhspsj);
+		zhspsj = monthDiff(zhDate,today);
+		
+		var ageAtPresent = $('#age').val();
+		
+		//年龄转换
+		if(ageAtPresent>=40){
+			nl = 1;
+		}else{
+			nl = 0;
+		}
+		//婚姻状况转换
+		var marriageAtPresent = $('#marriage_sqb').combobox('getValue');
+		if(marriageAtPresent != 1){
+			hyzk = 1;
+		}else{
+			hyzk = 0;
+		}
+		
+		var atPresentMap = new Map();//界面变量map
+		atPresentMap.put('CFC','CFC'+sfcfc);
+		atPresentMap.put('DKLX','DKLX'+dklx);
+		atPresentMap.put('DKSX','DKSX'+dksx);
+		atPresentMap.put('NL','NL'+nl);
+		atPresentMap.put('HYZT','HYZT'+hyzk);
+		atPresentMap.put('GSC','GSC'+sfgsc);
+		atPresentMap.put('SPSJ','SPSJ'+zhspsj);
+		atPresentMap.put('AJ','AJ'+sfaj);
+		atPresentMap.put('DBR','DBR'+ywdbr);
+		atPresentMap.put('YWJZ','YWJZ'+ywjz);
+		
+		var mapData = new Map();//影响车辆额度的属性map
+		mapData.put("CFC", "CFC1");//车辆查封状态 查封车  1
+		mapData.put("DKLX", "DKLX0");//贷款类型 抵押 0
+		mapData.put("DKLX", "DKLX1");//贷款类型 质押 1
+		
+		mapData.put("DKSX", "DKSX4");//贷款手续 无 4
+		mapData.put("DKSX", "DKSX3");//贷款手续 预过户 3
+		mapData.put("DKSX", "DKSX2");//贷款手续 过户 2
+		mapData.put("DKSX", "DKSX1");//贷款手续 抵押登记 1
+		
+		mapData.put("NL", "NL1");//年龄 >=40  1  
+		mapData.put("HYZT", "HYZT1");//婚姻状况 单身 :1[未婚 0,离异 2,丧偶 3]
+		mapData.put("GSC", "GSC1");//公司车 是 1
+		mapData.put("SPSJ", "SPSJ1");//上牌时间 三个月以内  1
+		mapData.put("AJ", "AJ1");//是否按揭  是  1
+		mapData.put("DBR", "DBR0");//担保人   无 0
+		mapData.put("YWJZ", "YWJZ0");//有无驾照   无 0
+		
+		var mapCondition = new Map();//情况对应折扣的map
+		mapCondition.put("4",new Array("CFC1"));//查封车4折
+		mapCondition.put("5",new Array("DKLX0","YWJZ0","DBR0"));//抵押开走、无驾照
+		mapCondition.put("6",new Array("DKLX0","NL1","HYZT1","DBR0"));//抵押开走、40岁（包含40岁）以上单身
+		//mapCondition.put("5",new Array("AJ1","DKLX1"));//按揭车  5折
+		mapCondition.put("6",new Array("DKLX0","GSC1"));//公司车  6折
+		mapCondition.put("3",new Array("AJ1","SPSJ1"));//按揭车、上牌时间三个月内，3折
+		
+		mapCondition.put("7",new Array("DKLX0","DKSX1"));//抵押+抵押登记，7折
+		mapCondition.put("8",new Array("DKLX0","DKSX2"));//抵押+抵押过户，8折
+		mapCondition.put("7.5",new Array("DKLX0","DKSX3"));//抵押+预过户，7.5折
+		mapCondition.put("0",new Array("DKLX0","DKSX4"));//抵押+无，0折
+		mapCondition.put("8",new Array("DKLX1","DKSX1"));//质押+抵押登记，8折
+		mapCondition.put("9.5",new Array("DKLX1","DKSX2"));//质押+抵押过户 ，9.5折
+		mapCondition.put("8.5",new Array("DKLX1","DKSX3"));//质押+预过户 ，8.5折
+		mapCondition.put("5",new Array("DKLX1","DKSX4"));//质押+无，5折
+		
+		//var atPresentArray = atPresentMap.values;
+		
+		var arr = new Array();
+		var arrR = new Array();
+		var arrkey = new Array();
+		
+		arrR = atPresentMap.values();
+		//console.info(arrR);
+		
+		var e = mapCondition.elements; 
+		for (i = 0; i < e.length; i++) {
+			arr = e[i].value;
+			if(isContained(arrR,arr)){
+				arrkey.push(e[i].key);
+			}
+        }
+		
+		arrkey.sort();//数组排序
+		
+		if(arrkey.length!=0){
+			discount = arrkey[0];
+			if(arrkey.length>1){
+				if(arrkey[0]==arrkey[1]){
+					discount = arrkey[0]-1;
+				}
+			} 
+		}
+		console.info(arrkey);
+		console.info('是否按揭:'+sfaj+',是否公司车:'+sfgsc+',有无驾照:'+ywjz+',是否查封车:'+sfcfc+',有无担保人'+ywdbr+',贷款类型'+dklx+',贷款手续'+dksx+',年龄>=40岁'+nl+',婚姻状况'+hyzk);
+		console.info('最终折扣:'+discount);
+		console.info('车辆估价 :'+evaluate);
+		console.info('车辆额度:'+evaluate * discount/10);
+		$('#carLimit'+cledId).val(evaluate * discount/10);//车辆额度 = 车辆估价 * 折扣/10
+		$('#planteLimit'+cledId).val(cped);//车牌额度
+		
+		//var dxsx_one = $('#carLimit'+cledId).combobox('getValue');
+		
+		//传贷款手续
+/*     	var sx = $('#loanFormal_edxx').combobox('getValue');
+    	console.info(sx);
+    	$('#loanFormal_add').val(sx); */
+		
+	}
+	
+	
+	//计算总计
+	function total(){
+		
+		var shouxu = '';
+		var gujia=0;
+		var edu=0;
+		var lsedu=0;
+		var dbedu=0;
+		var xyedu=0;
+		$('#mytable .info-edu').each(function(){
+			var val = $(this).find('.shouxu').combobox('getValue');
+			shouxu+=val;
+			var val = $(this).find('.gujia').val();
+			gujia += parseFloat(val?val:0);
+			var val = $(this).find('.edu').val();
+			edu += parseFloat(val?val:0);
+			var val = $(this).find('.lsedu').val();
+			lsedu += parseFloat(val?val:0);
+			var val = $(this).find('.dbedu').val();
+			dbedu += parseFloat(val?val:0);
+			var val = $(this).find('.xyedu').val();
+			xyedu += parseFloat(val?val:0);
+		})
+		
+		$('#all-info-edu .gujia').val(gujia);
+		$('#all-info-edu .edu').val(edu);
+		$('#all-info-edu .lsedu').val(lsedu);
+		$('#all-info-edu .dbedu').val(dbedu);
+		$('#all-info-edu .xyedu').val(xyedu);
+		$('#loanFormal_add').val(shouxu);
+		initBorrowAmount();
+	}
+	
+	//是否被包含,是返回true,不是返回false
+	function isContained(a, b){
+		//console.info('isContained()');
+		//console.info(!(a instanceof Array));
+		//console.info(!(b instanceof Array));
+		
+	    if(!(a instanceof Array) || !(b instanceof Array)) return false;
+	    if(a.length < b.length) return false;
+	    var aStr = a.toString();
+	    for(var i = 0, len = b.length; i < len; i++){
+	       if(aStr.indexOf(b[i]) == -1) return false;
+	    }
+	    return true;
+	}
+	
+
+	</script>
 </head>
 <body>
+	<form id="total_form" method="post">
 	
+		<div id="cc" class="easyui-layout" style="height: 100%; width: auto;" data-options="fit:true">
+		
+<!-- 			window.open("${rc.contextPath}/wdImgManage/toList?custId="+row_borro.uid+"&carId="+row_pawn.id+"&carName="+encodeURI(encodeURI(row_pawn.name))); // $!{BBI.custId}弹整个页面 -->
+			
+			#if($!{BBI.nodeId} ==  'A05')
+			<div data-options="region:'west',border:false" style="width:600px;height:100%;">
+		        <iframe style="width:100%;height:100%" src="${rc.contextPath}/wdImgManage/toList?custId=$!{BBI.custId}&carId=$!{carId}"></iframe>
+		    </div>
+			#end
+			
+			<!--<div region="center" style="padding: 5px; background: #eee;" data-options="fit:true">-->
+			<div data-options="region:'center',border:false" style="width:100%;height:100%;" data-options="fit:true">
+				
+				<!-- 隐藏的岗位ID -->
+				<input type="hidden" id="nodeId" value="$!{BBI.nodeId}"/>
+				<!-- 隐藏的流程编号 -->
+				<input type="hidden" id="barCode" value="$!{BBI.barCode}"/>
+
+				<div id="tt" class="easyui-tabs" style="" data-options="fit:true">
+
+					<!-- 基础信息 -->
+					<div title="基础信息" style="padding: 10px">
+						<div class="clearfix chushen">
+							<div class="chushen_title">
+								<h3>
+									营业部信息 <font color='#66CDAA'>$!{BBI.barCode}</font>
+									<!-- <fontcolor='#DAA520'> $!{BBI.custId}</font> -->
+								</h3>
+							</div>
+							<div class="chushen_content" id="ywyxx">
+								<div class="chushen_content_left">
+									<ul>
+										<li><label class="name">&nbsp;&nbsp;&nbsp;营业网点：</label>
+											<div class="rDiv">
+												<input id="branchName" value="$!{BBI.branchName}"
+													style="width: 130px; color: #808080;" readonly="readonly"
+													class="easyui-validatebox" /> <input id="branchId"
+													value="$!{BRW.cid}" style="width: 130px" type="hidden"
+													class="easyui-validatebox" />
+											</div></li>
+										<li><label class="name">业务员姓名：</label>
+											<div class="rDiv">
+												<input value="$!{BRW.uidSaleName}"
+													style="width: 130px; color: #808080;" readonly="readonly"
+													class="easyui-validatebox" /> <input type="hidden"
+													value="$!{BRW.uidSale}" id="uidSale" style="width: 130px"
+													class="easyui-validatebox" />
+											</div></li>
+										<li><label class="name">客服姓名：</label>
+											<div class="rDiv">
+												<input value="$!{BBI.createId}"
+													style="width: 130px; color: #808080;" readonly="readonly"
+													class="easyui-validatebox" />
+											</div></li>
+										<li><label class="name">填报日期：</label>
+											<div class="rDiv">
+												<input id="tbrq" style="width: 130px; height: 19px;"
+													class="easyui-datebox"
+													data-options="formatter:myformatter,parser:myparser" />
+											</div></li>
+
+									</ul>
+								</div>
+							</div>
+						</div>
+
+						<div class="clearfix chushen">
+							<div class="chushen_title">
+								<h3>借款人信息</h3>
+							</div>
+							<div class="chushen_content" id="jkrxx">
+								<div class="chushen_content_left">
+									<ul>
+										<li><label class="name">&nbsp;&nbsp;&nbsp;客户姓名：</label>
+											<div class="rDiv">
+												<input value="$!{BBI.custName}" id="custName" style="width: 130px; color: #808080;" readonly="readonly" class="easyui-validatebox" />
+											</div></li>
+										<li><label class="name">客户身份证：</label>
+											<div class="rDiv">
+												<input value="$!{BRW.idNumber}" style="width: 130px; color: #808080;" readonly="readonly" class="easyui-validatebox" />
+											</div></li>
+										<li><label class="name"><font color='#FF0000'>*&nbsp;</font>有无驾照：</label>
+											<div class="rDiv">
+												<input id="regularCustomer_jkrxx" name="borrower.drivingLicence" value="$!{BRW.drivingLicence}" style="width: 130px;"/>
+											</div></li>
+
+										<li><label class="name">客户来源：</label>
+											<div class="rDiv">
+												<input id="custSource_jkrxx" value="$!{BRW.custSource}" style="width: 130px; color: #808080;" readonly="readonly" />
+											</div></li>
+									</ul>
+								</div>
+							</div>
+						</div>
+
+						<div class="clearfix chushen">
+
+							<div class="chushen_title">
+								<h3>抵押物信息</h3>
+							</div>
+							<div class="chushen_content" id="dywxx">
+								<div class="chushen_content_left">
+									<div style="width: 1150px; height: 400px; margin-top: 5px;" data-options="region:'center',border:false">
+										<table id="pawn_table"></table>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+
+					<!-- 申请表信息 -->
+					<div title="申请表信息" style="padding: 10px 10px 10px;">
+						<div class="content clearfix" id="shenqin">
+
+							<div class="clearfix chushen">
+
+								<div class="chushen_title">
+									<h3>客户资料</h3>
+								</div>
+								<div class="chushen_content" id="ywyxx">
+									<div class="chushen_content_left">
+										<ul class="clearfix">
+											<li>
+												<label class="name">&nbsp;&nbsp;&nbsp;客户姓名：</label>
+												<div class="rDiv">
+													<input value="$!{BBI.custName}" id="custName"
+														style="width: 130px; color: #808080;" readonly="readonly"
+														class="easyui-validatebox" />
+												</div>
+											</li>
+											<li><label class="name"><font color='#FF0000'>*&nbsp;</font>手机：</label>
+												<div class="rDiv">
+													<input type="hidden" name="borrower.cid" value="$!{BRW.cid}" style="width: 140px" />
+													<!-- <input type="hidden" name="barCode" value="$!{BBI.barCode}" style="width: 140px" />-->
+													<input type="hidden" name="borrower.uid" value="$!{BBI.custId}" style="width: 140px" /> 
+													<input name="borrower.mobile" id="mobile_add"
+														style="width: 130px;height:20px;line-height:20px;" value="$!{BRW.mobile}"
+														onBlur="checkMobile();" class="easyui-validatebox textbox"
+														data-options="required:true,validType:'integer'"
+														validType="mobile" data-options="required:true" /> 
+												</div>
+											</li>
+											<li><label class="name">性别：</label>
+												<div class="rDiv">
+													<input id="sex_sqb" style="width: 130px; color: #808080;"
+														readonly="readonly" class="easyui-validatebox"></input>
+												</div></li>
+											<li><label class="name">年龄：</label>
+												<div class="rDiv">
+													<input name="borrower.age" id="age" value="$!{BRW.age}"
+														style="width: 130px; color: #808080;" readonly="readonly"
+														class="easyui-validatebox" />
+												</div></li>
+										</ul>
+										<ul class="clearfix">
+											<li style="width: 36%;margin-right:8px;"><label class="name"><font
+													color='#FF0000'>*&nbsp;</font>户籍所在地：</label>
+												<div class="rDiv">
+													<input name="borrower.houseAddr" id="businessDep_add"
+														value="$!{BRW.houseAddr}" style="width: 412px"
+														class="easyui-validatebox" data-options="required:true" />
+												</div></li>
+											<li style="width: 47%;"><label class="name"><font
+													color='#FF0000'>*&nbsp;</font>现住址：</label>
+												<div class="rDiv">
+													<input name="borrower.nowAddr" id="businessDep_add"
+														value="$!{BRW.nowAddr}" style="width: 410px"
+														class="easyui-validatebox" data-options="required:true" />
+												</div></li>
+										</ul>
+										<ul class="clearfix">
+											<li><label class="name"><font color='#FF0000'>*&nbsp;</font>婚姻状况：</label>
+												<div class="rDiv">
+													<input style="width: 130px;" name="borrower.marriage"
+														id="marriage_sqb" data-options="required:true"
+														value="$!{BRW.marriage}" />
+												</div></li>
+											<li><label class="name">家庭电话：</label>
+												<div class="rDiv">
+													<input name="borrower.familyTel" style="width: 130px"
+														value="$!{BRW.familyTel}" class="easyui-validatebox" />
+												</div></li>
+											<li><label class="name">单位电话：</label>
+												<div class="rDiv">
+													<input name="borrower.compTel" id="businessDep_add"
+														value="$!{BRW.compTel}" style="width: 130px"
+														class="easyui-validatebox" />
+												</div></li>
+											<li><label class="name">学历：</label>
+												<div class="rDiv">
+													<input name="borrower.education" id="education_add"
+														style="width: 130px" value="$!{BRW.education}"
+														class="easyui-validatebox" />
+												</div></li>
+										</ul>
+										<ul class="clearfix">
+											<li><label class="name">工作单位：</label>
+												<div class="rDiv">
+													<input name="borrower.companyName"
+														value="$!{BRW.companyName}" id="businessDep_add"
+														style="width: 130px" class="easyui-validatebox" />
+												</div></li>
+											<li><label class="name">工作年限：</label>
+												<div class="rDiv">
+													<input name="borrower.workYears" value="$!{BRW.workYears}"
+														style="width: 130px" class="easyui-validatebox" />
+												</div></li>
+											<li><label class="name">单位地址：</label>
+												<div class="rDiv">
+													<input name="borrower.compAddr" value="$!{BRW.compAddr}"
+														style="width: 130px" class="easyui-validatebox" />
+												</div></li>
+											<li><label class="name">职业：</label>
+												<div class="rDiv">
+													<input name="borrower.job" id="job_add"
+														style="width: 130px" value="$!{BRW.job}"
+														class="easyui-validatebox" />
+												</div></li>
+										</ul>
+										<ul class="clearfix">
+											<li><label class="name">年收入：</label>
+												<div class="rDiv">
+													<input name="borrower.annualIncome"
+														value="$!{BRW.annualIncome}" style="width: 130px"
+														class="easyui-validatebox" />
+												</div>
+											</li>
+										</ul>
+									</div>
+								</div>
+							</div>
+
+							<div class="home-status">
+								<div class="content2 clearfix" >
+									<div style="width:100%;">
+										<h3>家庭情况</h3>
+										<div class="has-border clearfix">
+											<table  id="addtr_jtqk" style="width:50%;width:600px" cellspacing='0'  border-collapse: collapse;>
+
+											<tr>
+												<td align="center" bgcolor="#CCCCCC" style="height: 22px;">姓名</td>
+												<td align="center" bgcolor="#CCCCCC" style="">关系</td>
+												<td align="center" bgcolor="#CCCCCC" style="">联系电话</td>
+												<td align="center" bgcolor="#CCCCCC" style="">备注</td>
+												<!--<td align="center"><input type="button" id="jtzk" value="添加一行" onclick="addField_jtzk()"/></td> -->
+											</tr>
+	
+	
+											#set($leteers=["A","B","C","D"]) #foreach ($leter in $leteers)
+											#set($index = $!{velocityCount} - 1) #if(${BFI.size()}>=
+											$!{velocityCount})
+	
+											<tr>
+												<td height="20px;" align="center">
+													<input type="hidden" name="contacts[$!{index}].id" id="username_a" value="$!{BFI[$index].id}" /> 
+													<input type="hidden" name="contacts[$!{index}].custId" value="$!{BBI.custId}" />
+													<input type="hidden" name="contacts[$!{index}].type" value="0" /> 
+													<input class="input-s" type="text" name="contacts[$!{index}].contactName" id="username_a" value="$!{BFI[$index].contactName}" style="height:23px;"/>
+												</td>
+												<td align="center">
+													<input class="easyui-combobox" data-options="valueField:'code',textField:'codeDesc',url:'${rc.contextPath}/param/loadParam?kind=F_RELATION'"
+														name="contacts[$!{index}].relationType" id="guanxi_jtqk"
+														value="$!{BFI[$index].relationType}"
+														style="width: 80px;" />
+												</td>
+												<td align="center">
+													<input type="text" name="contacts[$!{index}].contactTel" value="$!{BFI[$index].contactTel}" style="height:23px;" /></td>
+												<td align="center">
+													<input class="input-l" type="text" name="contacts[$!{index}].remark" value="$!{BFI[$index].remark}" style="height:23px;" /></td>
+												<td style="padding: 0 5;">
+													<input type="button" value="拨" onclick="call('$!{BFI[$index].contactTel}',0);" style="float: left; padding: 0 5;"s /></td>
+												<td style="padding: 0 5;">
+													<input class="btn_clear" type="button" value="清空" style="float: left; padding: 0 5;" /></td>
+											</tr>
+											#else
+											<tr>
+												<td height="20px;" align="center">
+													<input type="hidden" name="contacts[$!{index}].id" />
+													<input type="hidden" name="contacts[$!{index}].custId" value="$!{BBI.custId}" />
+													<input type="hidden" name="contacts[$!{index}].type" value="0" />
+													<input class="input-s" type="text" name="contacts[$!{index}].contactName" style="height:23px;" /></td>
+												<td align="center">
+													<input class="easyui-combobox" data-options="valueField:'code',textField:'codeDesc',url:'${rc.contextPath}/param/loadParam?kind=F_RELATION'"
+														name="contacts[$!{index}].relationType" id="guanxi_jtqkElse" style=" width: 80px;" />
+												</td>
+												<td align="center">
+													<input type="text" name="contacts[$!{index}].contactTel" style="height:23px;"/></td>
+												<td align="center">
+													<input class="input-l" type="text" name="contacts[$!{index}].remark" style="height:23px;" /></td>
+											</tr>
+											#end #end
+	
+	
+										</table>
+										</div>	
+									</div>
+								</div>
+							</div>
+							<div class="home-status">
+								<div class="content2 clearfix">
+									<div  style="width:100%;">
+										<h3>其他联系人</h3>
+										<div class="has-border clearfix">
+											<table  id="addtr_qtlxr" style="width:50%;width:600px"  cellspacing='0'  border-collapse: collapse;>
+		
+												<tr>
+													<td align="center" bgcolor="#CCCCCC" style="height: 22px;">姓名</td>
+													<td align="center" bgcolor="#CCCCCC" style="">关系</td>
+													<td align="center" bgcolor="#CCCCCC" style="">联系电话</td>
+													<td align="center" bgcolor="#CCCCCC" style="">备注</td>
+												</tr>
+		
+												#set($leteers=["A","B","C","D"]) #foreach ($leter in $leteers)
+												#set($index = $!{velocityCount} - 1) #set($sub =
+												$!{velocityCount} + 4) #if(${BOI.size()}>= $!{velocityCount})
+		
+												<tr>
+													<td height="20px;" align="center">
+														<input type="hidden" name="contacts[$!{sub}].id" id="username_a" value="$!{BOI[$index].id}" /> 
+														<input type="hidden" name="contacts[$!{sub}].custId" value="$!{BBI.custId}" /> 
+														<input type="hidden" name="contacts[$!{sub}].type" value="1" /> 
+														<input class="input-s" type="text" name="contacts[$!{sub}].contactName" id="username_a" value="$!{BOI[$index].contactName}" style="height:23px;"/></td>
+													<td align="center">
+														<input class="easyui-combobox"
+															data-options="valueField:'code',textField:'codeDesc',url:'${rc.contextPath}/param/loadParam?kind=O_RELATION'"
+															name="contacts[$!{sub}].relationType" id="guanxi_qtlxr"
+															value="$!{BOI[$index].relationType}"
+															style=" width: 80px;" />
+													</td>
+													<td align="center">
+														<input type="text" name="contacts[$!{sub}].contactTel" value="$!{BOI[$index].contactTel}" style="height:23px;"/></td>
+													<td align="center">
+														<input class="input-l" type="text" name="contacts[$!{sub}].remark" value="$!{BOI[$index].remark}" style="height:23px;"/></td>
+													<td style="padding: 0 5;">
+														<input type="button" value="拨" onclick="call('$!{BOI[$index].contactTel}',1);" style="float: left; padding: 0 5;" /></td>
+													<td style="padding: 0 5;">
+														<input class="btn_clear" type="button" value="清空" style="float: left; padding: 0 5;" /></td>
+												</tr>
+												#else
+												<tr>
+													<td height="20px;" align="center">
+														<input type="hidden" name="contacts[$!{sub}].id" />
+														<input type="hidden" name="contacts[$!{sub}].custId" value="$!{BBI.custId}" /> 
+														<input type="hidden" name="contacts[$!{sub}].type" value="1" /> 
+														<input class="input-s" type="text" name="contacts[$!{sub}].contactName" style="height:23px;"/></td>
+													<td align="center">
+														<input class="easyui-combobox"
+															data-options="valueField:'code',textField:'codeDesc',url:'${rc.contextPath}/param/loadParam?kind=O_RELATION'"
+															name="contacts[$!{sub}].relationType" id="guanxi_qtlxrElse"
+															style="width: 80px;" />
+													</td>
+													<td align="center">
+														<input type="text" name="contacts[$!{sub}].contactTel" style="height:23px;"/></td>
+													<td align="center">
+														<input class="input-l" type="text" name="contacts[$!{sub}].remark" style="height:23px;"/></td>
+												</tr>
+												#end #end
+		
+											</table>
+										</div>
+									</div>
+								</div>
+							</div>
+							
+							
+							
+							
+							<br>
+							
+							<!-- 						<div class="content2 clearfix" style="height: 160px" id="acontant"><iframe scrolling="auto" frameborder="0"  src="${rc.contextPath}/busshow/acontant?barCode=1464681378673" style="width:100%;height:100%;"></iframe></div> -->
+							<!-- 申请表中的备注 -->
+							<div class="message">
+								<label class="tagLabel" style="color:blue;text-indent:5px;display:block;font-size:14px;font-weight:bold;">备注</label>
+								<textarea name="bidInfo.remark" style="width: 800px; height: 50px; resize: none;margin-left:2%;margin-top:10px;margin-bottom:10px;">$!{BBI.remark}</textarea>
+							</div>
+							
+							<!-- 致电记录 -->
+							<div class="message">
+								<div class="left">
+									<div id="zdjl_di">
+										<h3 style="text-indent:5px;">致电记录</h3>
+										<div class="has-border">
+											<table id="zdjl_table" style="width: 800; height: 190px;"></table>
+										</div>
+									</div>
+								</div>
+							</div>
+							
+							<div id="jjyy" class="left" style="margin-left: 5px; margin-top: 10px;display: none">
+								<label class="tagLabel" style="margin-top: 10px;">拒绝原因：</label>
+								<textarea name="bidInfo.remark" style="width: 800px; height: 50px; resize: none;">$!{jjyy}</textarea>
+							</div>
+							
+							<!-- 电核岗操作按钮 -->
+							<div style="margin-left: 360px; margin-top: 30px;" class="buttonBOX">
+								<input type="button" id="tiJiaoBtn_dhg" style="float: left; display: none;" onclick="saveDhgxx(1);" value="提交" /> 
+								<input type="button" id="baoCunBtn_dhg" style="float: left; display: none;" onclick="saveDhgxx(0);" value="保存" /> 
+								<input type="button" id="tuihuiBtn_dhg" style="float: left; display: none;" onclick="openSendBackDlg_dhg();" value="退回" />
+								<input type="button" id="refuseBtn_dhg" style="float: left; display: none;" onclick="refuse_dhg(3);" value="拒绝" />
+								<input type="button" id="previewBtn_dhg" style="float: left; display: none;" onclick="preview();" value="费用单预览" /> 
+								<input type="button" id="danBaoRenBtn_dhg" style="float: left; display: none;" onclick="openBondsmanDHG();" value="担保人" /> 
+								<input type="button" id="ckqjbzBtn_dhg" style="float: left; display: none;" onclick="openQjbz();" value="查看全局备注" /> 
+								<input type="button" id="ckyxBtn_dhg" style="float: left; display: none;" onclick="ckyx();" value="查看影像" />
+								<input type="button" id="dhgqBtn_dhg" style="float: left; display: none;" onclick="dhgqOrqx(0);" value="电核挂起" />
+								<input type="button" id="qxgqBtn_dhg" style="float: left; display: none;" onclick="dhgqOrqx(1);" value="取消挂起" />
+							</div>
+							
+						</div>
+					</div>
+
+					<!-- 费用信息-->
+					<div title="费用信息" style="padding: 10px;">
+
+						<div class="clearfix chushen" style="width: 100%;min-width:1200px;">
+							<div class="chushen_title">
+								<h3>初始信息</h3>
+							</div>
+							<div class="chushen_content" id="ywyxx">
+								<div class="chushen_content_left">
+									<ul class="clearfix">
+										<li>
+											<label class="name">&nbsp;&nbsp;&nbsp;客户姓名：</label>
+											<div class="rDiv">
+												<input value="$!{BBI.custName}" id="custName" style="width: 130px; color: #808080;" readonly="readonly" class="easyui-validatebox" />
+											</div>
+										</li>
+										<li><label class="name">流程类型：</label>
+											<div class="rDiv">
+												<!-- 传隐藏的贷款手续 -->
+												<input type="hidden" id="loanFormal_add" name="bidInfo.loanFormal" value="$!{BBI.loanFormal}" style="width: 130px" />
+												<!-- 传隐藏的贷款金额 -->
+												<input type="hidden" id="loanAmount_add" name="bidInfo.loanAmount" value="$!{BBI.loanAmount}" style="width: 130px" />
+												<!-- 传隐藏的流程编号 -->
+												<input type="hidden" name="bidInfo.barCode" value="$!{BBI.barCode}" style="width: 130px" />
+												<!-- 传隐藏的岗位ID -->
+												<input type="hidden" name="bidInfo.nodeId" value="$!{BBI.nodeId}" style="width: 130px" />
+												<input id="custType_fyxx" name="bidInfo.custType" style="width: 130px" disabled="disabled" />
+											</div>
+										</li>
+										<li><label class="name"><font color='#FF0000'>*&nbsp;</font>贷款类型：</label>
+											<div class="rDiv">
+												<input id="loanType_add" name="bidInfo.loanType" value="$!{BBI.loanType}" style="width: 130px" onchange="change(this.id);" />
+											</div>
+										</li>
+									</ul>
+									<ul class="clearfix">
+									<li><label class="name">放款类型：</label>
+											<div class="rDiv">
+												<input id="makeLoanType_add" name="bidInfo.makeLoanType" value="$!{BBI.makeLoanType}" style="width: 130px" />
+											</div>
+										</li>
+										<li><label class="name">加急费用（元）：</label>
+											<div class="rDiv">
+												<input id="urgentFee" name="bidInfo.urgentFee" value="$!{BBI.urgentFee}" style="width: 130px" class="easyui-validatebox" />
+											</div>
+										</li>
+										<li><label class="name">建议预打款：</label>
+											<div class="rDiv">
+												<input name="bidInfo.adviceAdvanceAmount" id="ydk" value="$!{BBI.adviceAdvanceAmount}" style="width: 130px" class="easyui-validatebox" />
+											</div>
+										</li>
+									</ul>
+								</div>
+							</div>
+						</div>
+
+						<div class="clearfix chushen" style="width: 100%;min-width:1200px;">
+							<div class="chushen_title">
+								<h3>额度信息</h3>
+							</div>
+							<div class="chushen_content" id="ywyxx">
+								<table id="mytable" border="1px" id="tab"
+									style="margin-left: 70px; width:90%;">
+									<tr border="1px">
+										<td width="15%" style="text-align: center;"><font>车牌号</font></td>
+										<td width="15%" style="text-align: center;"><font>贷款手续</font></td>
+										<td width="15%" style="text-align: center;"><font>车辆估价</font></td>
+										<td width="15%" style="text-align: center;"><font>车辆额度</font></td>
+										<td width="10%" style="text-align: center;"><font>临时额度</font></td>
+										<td width="15%" style="text-align: center;"><font>担保/特批额度</font></td>
+										<td width="15%" style="text-align: center;"><font>车牌/信用额度</font></td>
+									</tr>
+									#foreach($car in $cars) #set($carIndex = $!{velocityCount} - 1)
+									<tr class="info-edu">
+										<td width="15%" style="width: 50px; height: 25px;text-align: center;"><font>$!{car.plateNumber}</font></td>
+										<td width="15%" style="text-align:center;"><input class="easyui-combobox shouxu" id="loanFormal$!{velocityCount}"
+											data-options="valueField:'code',textField:'codeDesc',url:'${rc.contextPath}/param/loadParam?kind=LOAN_FORMAT',required:true"
+											name="carInfo[$!{carIndex}].loanFormal" id="loanFormal$!{velocityCount}"
+											value="$!{car.loanFormal}" style="width: 120px;" />
+										</td>
+										<td width="15%" style="text-align:center;"><input class="gujia" value='$!{car.evaluate}' style="color: #808080;width: 120px;height:20px;" readonly="readonly" /><input name="carInfo[$!{carIndex}].id"
+											value='$!{car.id}' type="hidden" /></td>
+										<td width="15%" style="text-align:center;"><input class="edu" style="width: 120px;height:20px;" id="carLimit$!{velocityCount}" name="carInfo[$!{carIndex}].carLimit"
+											value='$!{car.carLimit}' class="easyui-validatebox" /></td>
+										<td width="10%" style="text-align:center;"><input class="lsedu" style="width: 120px;height:20px;" name="carInfo[$!{carIndex}].tempLimit"
+											value='$!{car.tempLimit}' /></td>
+										<td width="15%" style="text-align:center;"><input class="dbedu" style="width: 120px;height:20px;" name="carInfo[$!{carIndex}].guarLimit"
+											value='$!{car.guarLimit}' /></td>
+										<td width="15%" style="text-align:center;"><input class="xyedu" style="width: 120px;height:20px;" id="planteLimit$!{velocityCount}" name="carInfo[$!{carIndex}].planteLimit"
+											value='$!{car.planteLimit}' /></td>
+										<td style="padding: 0 5;"><input type="button"
+											value="计算车辆额度"
+											onclick="calculate('$!{car.carId}','$!{velocityCount}','$!{car.evaluate}');" style="float: left; padding: 0 5;" /></td>
+									</tr>
+									#end
+									<tr id="all-info-edu">
+										<td width="15%" style="text-align:center;"><font style="color:red;font-weight: bold;">总计：</font></td>
+										<td width="15%" class="shouxu"></td>
+										<td width="15%" style="text-align:center;"><input name="bidInfo.finalEvaluate" style="color:red;font-weight: bold;width: 120px;height:20px;"
+											id="finalEvaluate_add" value="$!{BBI.finalEvaluate}"
+											class="easyui-validatebox gujia" /></td>
+										<td width="15%" style="text-align:center;"><input id="carLimit_add" style="color:red;font-weight: bold;width: 120px;height:20px;"
+											name="bidInfo.carLimit" class="easyui-validatebox edu"
+											value="$!{BBI.carLimit}" /></td>
+										<td width="10%" style="text-align:center;"><input id="tempLimit_add" style="color:red;font-weight: bold;width: 120px;height:20px;"
+											name="bidInfo.tempLimit" class="easyui-validatebox lsedu"
+											value="$!{BBI.tempLimit}" /></td>
+										<td width="15%" style="text-align:center;"><input id="guarLimit_add" style="color:red;font-weight: bold;width: 120px;height:20px;"
+											name="bidInfo.guarLimit" class="easyui-validatebox dbedu"
+											value="$!{BBI.guarLimit}" /></td>
+										<td width="15%" style="text-align:center;"><input id="platenoLimit_add" style="color:red;font-weight: bold;width: 120px;height:20px;"
+											name="bidInfo.platenoLimit" class="easyui-validatebox xyedu"
+											value="$!{BBI.platenoLimit}" /></td>
+										<td style="padding: 0 5;">
+											<input type="button" value="总计" onclick="total();" style="float: left; padding: 0 5;" />
+											<input type="button" value="评分" onclick="pingFen();" style="margin-left: 5px;" id="pingfenBtn"/>
+										</td>
+									</tr>
+								</table>
+							</div>
+						</div>
+
+
+						<div style="width: 100%;min-width:1200px;" class="clearfix">
+
+							<div class="tab_content" id="a1">
+
+								<input type="hidden" name="borrow.barCode"
+									value="$!{BBI.barCode}" style="width: 140px" />
+
+								<!-- 标示是否为新标预览 -->
+								<input type="hidden" value="false" id="isNewBorrowPreview" />
+								<!-- 存储业务员名称-->
+								<input type="hidden" name="borrowExtend.saleUserName"
+									value="$!{saleUserName}" /> <input type="hidden"
+									name="borrow.productTypeId" value="1" />
+								<!-- 发标客服id -->
+								<input type="hidden" id="issueUid" name="borrow.issueUid"
+									value="$!{BRW.uidCus}" />
+								<!-- 发标客服客服名称 -->
+								<input type="hidden" name="borrow.issueUname"
+									value="$!{issueUname}" />
+								<!-- 借款人所属客服名称 -->
+								<input type="hidden" name="borrow.cusUserName"
+									value="$!{issueUname}" />
+								<!-- 借款人所属客服id -->
+								<input type="hidden" name="borrow.uidCus" value="$!{BRW.uidCus}" />
+								<!-- 储存提现金额上限 -->
+								<input type="hidden" id="cachUpper" value="$!{cachUpper}" />
+
+								<!-- 储存借款人所属分站名称 -->
+								<input type="hidden" id="stationName" name="borrow.stationName"
+									value="$!{BBI.branchName}" />
+
+								<div class="tab_title">
+									<h3 onclick="setTabAll('a1')">
+										<span></span>基本信息
+									</h3>
+								</div>
+								<div class="text_content clearfix">
+									<div class="text_content_left retext_content_left">
+										<ul>
+											<li><label class="name">标题</label> <input type="text"
+												name="borrow.title" id="title" value="#if ($!CHARGE.title)$!{CHARGE.title}#end "
+												class="textInput easyui-validatebox"
+												data-options="required:true"
+												style="width: 230px; text-align: left;" readonly="readonly" /></li>
+											<li><label class="name">是否质押</label>
+												<div class="rDiv">
+													<label class="rInput"><a href="javascript:;"
+														onclick="checkpledgeType(0)"><input type="radio"
+															id="pledgeTypeNo" checked="checked"
+															name="borrow.pledgeType" value="0" /></a>无质押</label> <label
+														class="rInput"><a href="javascript:;"
+														onclick="checkpledgeType(1)"><input type="radio"
+															id="pledgeTypezhiYa" name="borrow.pledgeType" value="1" /></a>质押</label>
+												</div></li>
+											<li><label class="name">是否续贷</label>
+												<div class="rDiv">
+													<label class="rInput"><input type="radio"
+														id="isRenewLoanNo" checked="checked"
+														name="borrow.isRenewLoan" value="0" />非</label> <label
+														class="rInput"><input type="radio"
+														id="isRenewLoanYes" name="borrow.isRenewLoan" value="1" />是</label>
+												</div></li>
+											<li><label class="name">还款方式</label>
+												<div class="rDiv">
+													<label class="rInput"><a href="javascript:;"
+														onclick="checkrepaymentStyle(0)"><input type="radio"
+															id="repaymentStyle" checked="checked"
+															name="borrow.repaymentStyle" value="0" /></a>月还息到期还本</label> <label
+														class="rInput"><a href="javascript:;"
+														onclick="checkrepaymentStyle(1)"><input type="radio"
+															id="repaymentStyleDengE" name="borrow.repaymentStyle"
+															value="1" /></a>等额本息</label>
+												</div></li>
+											<li><label class="name">首期预扣</label>
+												<div class="rDiv">
+													<label class="rInput"><input type="radio"
+														name="borrow.isFirstPre" id="isFirstPre2"
+														checked="checked" value="1" />预扣首期</label> <label class="rInput"><input
+														type="radio" id="isFirstPre" name="borrow.isFirstPre"
+														value="0" />不预扣</label>
+												</div></li>
+											<li><label class="name">预览选项:</label> <input
+												type="checkbox" checked="checked" id="vipFeeShow" />显示VIP扣费?
+											</li>
+											<li><label class="name">VIP年费</label> <input type="text"
+												class="textInput" id="vipFee" name="borrow.vipFee"
+												value="120" /></li>
+											<li><label class="name">借款人利率</label> <input type="text"
+												class="textInput easyui-validatebox"
+												onkeyup="updateDongJie()" id="borrowapr"
+												data-options="required:true,validType:'valid'"
+												name="borrow.borrowerAnnualYield" value="11.2" /> <span>%</span></li>
+											<li><label class="name">投资人利率</label> <input type="text"
+												class="textInput  easyui-validatebox"
+												name="borrow.borrowAnnualYield" id="borrowAnnualYield"
+												data-options="required:true,validType:'valid'" value="11.2" />
+												<span id="interest">% 年化利率</span></li>
+											<li><label class="name">发标周期</label> <input
+												onblur="checkborroePeriod(this)" onkeyup="updatePackage()"
+												type="text" class="textInput easyui-validatebox" id="zhouqi"
+												name="borrow.borroePeriod"
+												data-options="required:true,validType:'valid'" value="1" />
+												<label><a href="javascript:;"
+													onclick="changeInterest('0')"><input type="radio"
+														id="periodTimeUnit" name="borrow.periodTimeUnit" value="0" /></a>天</label>
+												<label><a href="javascript:;"
+													onclick="changeInterest('1')"><input type="radio"
+														id="periodTimeUnitMonth" name="borrow.periodTimeUnit"
+														value="1" checked="checked" /></a>月</label></li>
+											<li><label class="name">发标金额</label> <input type="text"
+												id="currentAccount" onkeyup="updateDongJie()"
+												class="textInput easyui-validatebox"
+												data-options="required:true,validType:'valid'"
+												name="borrow.borrowAmount" value="0" /> <span
+												id="fabiao_account">0元</span></li>
+											<li><label class="name">手投最低金额</label> <input
+												type="text" class="textInput  easyui-validatebox"
+												name="borrow.tenderMinAmount" id="tenderMinAmount"
+												data-options="required:true,validType:'valid'" value="50" />
+											</li>
+											<li><label class="name">手投最高金额</label> <input
+												type="text" class="textInput easyui-validatebox"
+												onkeyup="setTenderAccount()" value="0"
+												data-options="required:true,validType:'valid'"
+												name="borrow.tenderMaxAmount" id="tenderMaxAmount" /> <span
+												id="maxTender">0元</span></li>
+											<li><label class="name">允许投标天数</label> <input
+												type="text" class="textInput easyui-validatebox"
+												data-options="required:true,validType:'valid'"
+												name="borrow.validTenderDays" id="validTenderDays" value="7" /></li>
+											<li><label class="name">奖励比例</label> <input type="text"
+												id="award" title="请输入小于1的值" onblur="checkAward(this)"
+												class="textInput easyui-validatebox"
+												data-options="required:true,validType:'valid'"
+												name="borrow.awardAmonut" value="0" /></li>
+											<li><label class="name">冻结保证金</label> <input type="text"
+												id="dongjieApr" onkeyup="updateDongJie()"
+												class="textInput easyui-validatebox"
+												data-options="required:true,validType:'valid'" value="0.05" />
+												<span>冻结:<span id="dongjie">0</span></span> <input
+												type="hidden" name="borrow.deposit" value="0" id="deposit">
+									</div>
+									<div class="text_content_right">
+										<ul>
+											<li><label class="name">标密码</label> <input type="text"
+												class="textInput" name="borrow.password" /></li>
+										</ul>
+										<div class="tab_content" id="a2">
+											<div class="tab_title">
+												<h3 onclick="setTabAll('a2')">
+													<span></span>收费目录
+												</h3>
+											</div>
+											<div class="text_content">
+												<div style="padding: 20px 10px 10px;">
+													<div id="emloyee_toolbar">
+														<div class="operate-bnt" style="line-height: 28px;">
+															<div class="fl">
+																选定套餐：<em id="promptPackage"></em>
+															</div>
+															<div class="fr">
+																固定利率 <input type="text" id="rate"
+																	onblur="updateDongJie()" 
+																	value='0' style="width: 40px;" />% <input
+																	type="button" value="计算" onclick="updateDongJie()" />
+															</div>
+														</div>
+													</div>
+													<table id="borrowPackageDataGridList"
+														style="height: 275px;"></table>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+
+							<div class="tab_content" id="a4" style="margin-top: 20px;">
+								<div class="tab_title">
+									<h3 onclick="setTabAll('a4')">
+										<span></span>标说明
+									</h3>
+								</div>
+								<div class="text_content">
+									<div style="padding: 20px 10px 10px;">
+										<textarea name="borrow.note" id="editorRemark"
+											style="width: 1180px; height: 100px; resize: none;"></textarea>
+									</div>
+								</div>
+							</div>
+							<!-- <input type="hidden" id="packageId" name="packageId" value="0" />
+							<input type="hidden" id="diyaIds" name="pbiIds" value="0" /> -->
+							<!-- 存储实际套餐费用 -->
+							<input type="hidden" id="manageerFee" value="-1" /> <input
+								type="hidden" id="yicixingmanageFee" />
+							<div id="borrowpackageDetails"></div>
+							<input type="hidden" name="currentDate" value="$!{currentDate}" />
+							<input type="hidden" id="premiumDeduct" name="borrow.insuranceFreeze"
+								value="0" /> <input type="hidden" id="annual" name="borrow.inspection"
+								value="0" /> <input type="hidden" id="violationDeduct"
+								name="borrow.illegalFreeze" value="0" /> 
+								<input type='hidden' id="packageDetailJson" name='borrowExtend.packageDetailJson'
+								value=''>
+							<!-- 存放收费标准 -->
+							<div id="addpledge_notes"></div>
+						</div>
+					</form>
+				
+					<!-- 拨打电话窗口 -->
+					<div id="boda_dialog" class="easyui-dialog" modal="true" title="呼出详情"
+						style="width: 400px; height: 270px; padding: 10px 20px;" closed="true"
+						buttons="#dlg-buttons">
+						<form id="fm" method="post">
+							<input type="hidden" name="barCode" id="barCode_call"
+								style="width: 140px" /> <input type="hidden" name="callType"
+								id="callType" style="width: 140px" />
+							<div class="fitem">
+								<label>电话号码</label> <input name="telephone" id="phoneNumber_add"
+									style="width: 145px; color: #808080;" readonly="readonly"
+									class="easyui-validatebox" />
+							</div>
+							<div class="fitem">
+								<label> 接听人<font color='#FF0000'>&nbsp;&nbsp;*</font></label> <input
+									name="answerPerson" id="answerPerson_add"
+									data-options="required:true" class="easyui-validatebox"
+									style="width: 145px" />
+							</div>
+							<div class="fitem">
+								<label> 拨打结果<font color='#FF0000'>&nbsp;&nbsp;*</font></label> <input
+									name="callResult" id="callResult_add" data-options="required:true"
+									style="width: 145px" />
+							</div>
+							<div class="fitem">
+								<label> 备注</label> <input name="remark" id="remark_add"
+									class="easyui-vlidatebox" style="width: 145px" />
+							</div>
+						</form>
+					</div>
+					<div id="dlg-buttons">
+						<a href="javascript:void(0)" class="easyui-linkbutton" onclick="saveCallRecords()" iconcls="icon-ok">保存</a>
+						<a href="javascript:void(0)" class="easyui-linkbutton" onclick="javascript:$('#boda_dialog').dialog('close')" iconcls="icon-cancel">取消</a>
+					</div>
+				
+					<!-- 初审岗操作按钮 -->
+					<div style="margin-left: 360px; margin-top: 30px;" class="buttonBOX">
+						<input type="button" id="tiJiaoBtn" style="float: left; display: none;" onclick="saveCsxx(1);" value="提交" />
+						<input type="button" id="baoCunBtn" style="float: left; display: none;" onclick="saveCsxx(0);" value="保存" />
+						<input type="button" id="ckyxBtn" style="float: left; display: none;" onclick="ckyx();" value="上传影像" />
+						<input type="button" id="cktdbgBtn" style="float: left; display: none;" onclick="openTdbg();" value="查看资信报告" />
+						<input type="button" id="quxiaoBtn" style="float: left; display: none;" onclick="openSendBackDlg_csg(2);" value="取消" />
+						<input type="button"id="fhgwlb" style="float: left; display: none;" onclick="goBack();" value="返回岗位列表" />
+						<input type="button" id="previewBtn" style="float: left; display: none;" onclick="preview();" value="费用单预览" />
+						<input type="button" id="danBaoRenBtn" style="float: left; display: none;" onclick="openBondsman();" value="担保人" />
+						<input type="button" id="ckqjbzBtn" style="float: left; display: none;" onclick="openQjbz();" value="查看全局备注" />
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
 </body>
 </html>
+
